@@ -1,1 +1,9 @@
 **/node_modules
+/.idea
+/db
+**/.DS_Store
+**/migrations
+**/seeds
+
+**/*.log
+**/package-lock.json
