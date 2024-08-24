@@ -31,7 +31,8 @@ services:
     ports:
       - 3001:3001
     volumes:
-      - ./server:/app
+      - ./server/:/app/
+      -  /app/node_modules
     links:
       - mysql_db
     command: npm start

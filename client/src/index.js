@@ -3,8 +3,6 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Router, Routes ,Route } from 'react-router-dom';
 import { Home } from './pages/home';
-import { Baymax } from './pages/baymax';
-import { Covid19 } from './pages/covid19';
 import './css/index.css';
 //import * as serviceWorker from './serviceWorker';
 
@@ -13,9 +11,7 @@ const root = ReactDOM.createRoot(container);
 root.render(
     <BrowserRouter>
     <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/baymax" element={<Baymax />} />
-        <Route path="/covid19" element={<Covid19 />} />
+        <Route path="/" element={<Home />} onEnter={document.title='thangka inpaint DEMO'}/>
     </Routes>
     </BrowserRouter>
 );
