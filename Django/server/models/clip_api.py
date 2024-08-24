@@ -7,7 +7,7 @@ import cv2
 
 import replicate
 import openai
-openai.api_key = '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'
+openai.api_key = 'openai.api_key'
 
 
 def process_video(request):

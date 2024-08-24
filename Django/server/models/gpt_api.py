@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 import openai
-openai.api_key = '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'
+openai.api_key = 'openai.api_key'
 
 def getPrompt(request):
     if request.method == 'POST':
