@@ -17,6 +17,8 @@ sudo systemctl daemon-reload
 sudo systemctl restart docker
 ```
 
+成功開啟的話可在localhost:3000看到網頁。
+
 Django
 ---------
 cd ./Django
