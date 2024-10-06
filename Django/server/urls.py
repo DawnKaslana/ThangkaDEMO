@@ -35,7 +35,7 @@ urlpatterns = [
     # path('uploadTest', hymenoptera.get_user_file), #要刪掉
     # path('text_emotion', bert_basic_emotion.get_user_text),
     # path('text_generate', gpt_api.getPrompt),
-    path('uploadImg/', save_file.get_user_img),
+    path('uploadImg/', save_file.user_img),
     path('getImg/', save_file.send_img),
     # path('processVideo', clip_api.process_video),
     # path('clipCap', clip_api.call_clipCap),

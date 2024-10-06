@@ -7,6 +7,7 @@ COPY package.json /app
 
 COPY . /app
 
-RUN npm install
+
+RUN npm config set registry https://mirrors.huaweicloud.com/repository/npm/ && npm install
 
 CMD ["npm", "start"]

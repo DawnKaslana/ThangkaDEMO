@@ -3,7 +3,9 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Router, Routes ,Route } from 'react-router-dom';
 import { Home } from './pages/home';
+import { User } from './pages/user';
 import './css/index.css';
+
 //import * as serviceWorker from './serviceWorker';
 
 const container = document.getElementById('root');
@@ -12,6 +14,7 @@ root.render(
     <BrowserRouter>
     <Routes>
         <Route path="/" element={<Home />} onEnter={document.title='thangka inpaint DEMO'}/>
+        <Route path="/login" element={<User />}  onEnter={document.title='login'}/>
     </Routes>
     </BrowserRouter>
 );

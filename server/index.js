@@ -36,5 +36,12 @@ const {putFile, getFile}  = require('./models/file');
 app.post('/uploadFile', (req, res) => putFile(req, res));
 app.get('/getVideo', (req, res) => getFile(req, res));
 
+//user
+const {getUserList, addUser, putUser, deleteUser}  = require('./models/user');
+app.get('/getUserList', (req, res) => getUserList(req, res));
+app.post('/addUser', (req, res) => addUser(req, res));
+app.put('/putUser', (req, res) => putUser(req, res));
+app.delete('/deleteUser', (req, res) => deleteUser(req, res));
+
 
 

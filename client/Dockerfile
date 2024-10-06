@@ -9,6 +9,8 @@ COPY . /app
 
 
 RUN yarn install
-RUN npm install
+RUN npm config set registry https://mirrors.huaweicloud.com/repository/npm/ && npm install
 
 CMD ["yarn", "start"]
+
+

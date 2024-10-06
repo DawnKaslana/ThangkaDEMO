@@ -12,13 +12,12 @@ def getToken(request):
     response = HttpResponse()
     return response
 
-
 def test(request):
     return JsonResponse({'msg': 'ok'})
 
 
 #@csrf_exempt
-def get_user_img(request):
+def user_img(request):
     if request.method == 'POST':
         imagefile = request.FILES.get("image")
         maskfile = request.FILES.get("mask")

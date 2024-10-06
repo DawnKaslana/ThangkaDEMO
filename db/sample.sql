@@ -22,22 +22,39 @@ SET time_zone = "+00:00";
 -- Database: `sampledb`
 --
 
+
 -- --------------------------------------------------------
 
 --
 -- Table structure for table `sample`
 --
 
-CREATE TABLE `sample` (
-  `id` int(255) NOT NULL,
-  `name` varchar(100) NOT NULL
+CREATE TABLE `user` (
+  `user_id` int(255) NOT NULL,
+  `user_name` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+CREATE TABLE `class` (
+  `id` int(255) NOT NULL,
+  `user_id` int(255) NOT NULL,
+  `value` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+CREATE TABLE `label` (
+  `id` int(255) NOT NULL,
+  `user_id` int(255) NOT NULL,
+  `value` varchar(255) NOT NULL,
+  `class` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
 
 --
 -- Dumping data for table `sample`
 --
 
-INSERT INTO `sample` (`id`, `name`) VALUES
+INSERT INTO `user` (`user_id`, `user_name`) VALUES
 (1, 'Mercury'),
 (2, 'Venus'),
 (3, 'Earth'),
@@ -47,6 +64,7 @@ INSERT INTO `sample` (`id`, `name`) VALUES
 (7, 'Uranus'),
 (8, 'Neptune');
 
+
 --
 -- Indexes for dumped tables
 --
@@ -54,7 +72,12 @@ INSERT INTO `sample` (`id`, `name`) VALUES
 --
 -- Indexes for table `sample`
 --
-ALTER TABLE `sample`
+ALTER TABLE `user`
+  ADD PRIMARY KEY (`user_id`);
+ALTER TABLE `class`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `label`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -64,10 +87,17 @@ ALTER TABLE `sample`
 --
 -- AUTO_INCREMENT for table `sample`
 --
-ALTER TABLE `sample`
+ALTER TABLE `user`
+  MODIFY `user_id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+COMMIT;
+
+ALTER TABLE `class`
   MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 COMMIT;
 
+ALTER TABLE `label`
+  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

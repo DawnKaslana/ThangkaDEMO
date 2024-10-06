@@ -1,0 +1,93 @@
+{
+    "editor.fontVariations": false,
+    "workbench.colorCustomizations": {
+    },
+    "editor.tokenColorCustomizations": {
+        "[Default Dark Modern]": {
+            "comments": "#149da4",
+            "functions": "#fbc2ff",
+            "keywords": "#e30b5c", 
+            "numbers": "#a086fe",
+            "strings": "#dbd4ab",
+            "textMateRules": [
+                {
+                    "scope": "keyword.operator",
+                    "settings": {
+                        "foreground": "#ff1493"
+                    },
+                },
+                {
+                    "scope": "keyword.control",
+                    "settings": {
+                        "foreground": "#ff1493" // export, if, else
+                    }
+                },
+                {
+                    "scope": "keyword.operator.new",
+                    "settings": {
+                        "foreground": "#9748ff"
+                    }
+                },
+                {
+                    "scope": "keyword.operator.arithmetic",
+                    "settings": {
+                        "foreground": "#ffffff"
+                    }
+                },
+                {
+                    "scope": "storage.type", //function, const
+                    "settings": {
+                        "foreground": "#9748ff"
+                    }
+                },
+                {
+                    "scope": "constant", //String, Number, Boolean…, this, super
+                    "settings": {
+                        "foreground": "#58fb86"
+                    }
+                },
+                {
+                    "scope": "storage.modifier", //static keyword
+                    "settings": {
+                        "foreground": "#64fbfe"
+                    }
+                },
+                {
+                    "scope": "entity.name",
+                    "settings": {
+                        "foreground": "#FF0000"
+                    }
+                },
+                {
+                    "scope": "emphasis",
+                    "settings": {
+                        "foreground": "#FF0000"
+                    }
+                },
+                {
+                    "scope": "string.quoted.double",
+                    "settings": {
+                        "foreground": "#dbd4ab"
+                    }
+                },
+                {
+                    "scope": "string.quoted.single",
+                    "settings": {
+                        "foreground": "#FFAF60"
+                    }
+                },
+                {
+                    "scope": "string.interpolated",
+                    "settings": {
+                        "foreground": "#FF0000"
+                    }
+                }
+                
+            ],
+            "types": "#10c79f",
+            "variables": "#94dbff"
+        }
+        
+    },
+    "workbench.colorTheme": "Default Dark Modern"
+}

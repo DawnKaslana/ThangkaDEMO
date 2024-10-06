@@ -1,9 +1,11 @@
 **/node_modules
-/.idea
-/db
+**/.idea
 **/.DS_Store
 **/migrations
 **/seeds
 
 **/*.log
 **/package-lock.json
+
+./Django/server/media/*.png
+./Django/server/media/*.jpg
