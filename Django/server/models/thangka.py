@@ -17,7 +17,7 @@ def test(request):
 
 
 #@csrf_exempt
-def user_img(request):
+def generate(request):
     if request.method == 'POST':
         imagefile = request.FILES.get("image")
         maskfile = request.FILES.get("mask")
@@ -32,8 +32,8 @@ def user_img(request):
         with open('./server/media/' + maskfile.name, 'wb') as fp:
             for chunk in maskfile.chunks():
                 fp.write(chunk)
-        if type == "Image Inpaint":
-            diffusion.inpaint(imagefile.name, maskfile.name, prompt, steps, type, SDModel)
+        if type == "inpaint":
+            diffusion.inpaint(imagefile.name, maskfile.name, prompt, steps, SDModel)
             return JsonResponse({'msg': "inpainted"})
         return JsonResponse({'msg': "uploaded"})
 

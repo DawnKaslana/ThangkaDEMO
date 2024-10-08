@@ -61,8 +61,11 @@ const useStyles = makeStyles((theme) => ({
       flexGrow: 1,
       padding: theme.spacing(3),
     },
-    columnCenter: {
+    flexColCenter: {
       display:"flex",flexDirection:"column", justifyContent:"center", alignItems: 'center'
+    },
+    flexRow: {
+      display:"flex",flexDirection:"row", alignItems: 'center'
     }
   }));
   

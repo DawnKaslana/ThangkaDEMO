@@ -17,11 +17,7 @@ from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse
 
-
-# from .models import bert_basic_emotion
-# from .models import gpt_api
-# from .models import clip_api
-from .models import save_file
+from .models import thangka
 from .models import ernie_bot
 
 def helloWorld(request):
@@ -29,14 +25,11 @@ def helloWorld(request):
 
 urlpatterns = [
     path('', helloWorld),
-    path('getToken/', save_file.getToken),
     path('admin/', admin.site.urls),
-    path('test/', save_file.test),
-    # path('text_generate', gpt_api.getPrompt),
-    path('uploadImg/', save_file.user_img),
-    path('getImg/', save_file.send_img),
-    path('changePipe/', save_file.changePipe),
+    path('getToken/', thangka.getToken),
+    path('test/', thangka.test),
+    path('generate/', thangka.generate),
+    path('getImg/', thangka.send_img),
+    path('changePipe/', thangka.changePipe),
     path('chat/', ernie_bot.chat)
-    # path('processVideo', clip_api.process_video),
-    # path('clipCap', clip_api.call_clipCap),
 ]

@@ -33,7 +33,7 @@ def changeModel(generateType, model):
             pipe = StableDiffusionInpaintPipeline.from_pretrained(
                 premodel_abspath,
                 torch_dtype=torch.float16)
-        if model == "CN":
+        if model == "CNI":
             premodel_abspath = join(sd_model_path, "SD15")
             cnmodel_abspath = join(cn_model_path, "control_v11p_sd15_inpaint")
             controlnet = ControlNetModel.from_pretrained(
@@ -49,26 +49,36 @@ def changeModel(generateType, model):
             pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
 
     # load lora
-    pipe.load_lora_weights(join(model_path, "thangka_ACD"), weight_name="pytorch_lora_weights.safetensors")
+    # pipe.load_lora_weights(join(model_path, "thangka_ACD"), weight_name="pytorch_lora_weights.safetensors")
     # model_id = "checkpoint-25000" #if needed
-    # load pipe
-    pipe.to("cuda")
     return pipe
 
+# load pipe
+# pipe = changeModel("inpaint", "CNI")
+# pipe.to("cuda")
 
-# pipe = changeModel("inpaint", "SDI2")
+"""
+process
+"""
+def make_inpaint_condition(image, image_mask):
+    image = np.array(image.convert("RGB")).astype(np.float32) / 255.0
+    image_mask = np.array(image_mask.convert("L")).astype(np.float32) / 255.0
 
+    assert image.shape[0:1] == image_mask.shape[0:1], "image and image_mask must have the same image size"
+    image[image_mask > 0.5] = -1.0  # set as masked pixel
+    image = np.expand_dims(image, 0).transpose(0, 3, 1, 2)
+    image = torch.from_numpy(image)
+    return image
 
 """
 main func : inpaint text2img img2img img2text
 """
-def inpaint(fileName, maskName, text, steps, type, SDModel):
+def inpaint(fileName, maskName, text, steps, SDModel):
     # param check
-    print(fileName, maskName, text, steps, type, SDModel)
+    print(fileName, maskName, text, steps, SDModel)
     if not text: text = ""
     nagative_prompt = "bad,ugly,disfigured,blurry,watermark,normal quality,jpeg artifacts,low quality,worst quality,cropped,low res"
     steps = int(steps) if eval(steps) else 30
-    SDModel = "CNI" #SDI2 SD2 CNI
 
     # process image & mask  &  image_masked
     image = Image.open(join(filePath, fileName)).convert("RGBA").resize((512,512))
@@ -77,10 +87,10 @@ def inpaint(fileName, maskName, text, steps, type, SDModel):
     mask_image = images.create_binary_mask(mask_image)
     image = images.fill(image, mask_image)
 
-    if SDModel == "CN":
-        control_image = images.make_inpaint_condition(image, mask_image)
+    if SDModel == "CNI":
+        control_image = make_inpaint_condition(image, mask_image)
 
-    if SDModel == "SDI":
+    if SDModel == "SDI2":
         output = pipe(prompt=text,
             image=image,
             mask_image=mask_image,

@@ -8,6 +8,7 @@ import Cookies from 'universal-cookie';
 
 // MUI import
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import List from '@material-ui/core/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -24,6 +25,7 @@ import Tab from '@material-ui/core/Tab';
 import TabContext from '@material-ui/lab/TabContext';
 import TabList from '@material-ui/lab/TabList';
 import TabPanel from '@material-ui/lab/TabPanel';
+
 
 //Icon import
 import InboxIcon from '@mui/icons-material/MoveToInbox';
@@ -117,12 +119,7 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
 
     reader.addEventListener("load", function () {
       // convert image file to base64 string
-      if (type === "img") {
-        setImageSrc(reader.result)
-      }
-      else {
-        setMaskSrc(reader.result)
-      }
+     type === "img"?setImageSrc(reader.result):setMaskSrc(reader.result)
     }, false);
 
     if (file) {
@@ -130,7 +127,7 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
     }
   };
 
-  const uploadHandler = () => {
+  const generateHandler = () => {
     const formData = new FormData();
     if (selectedImg && selectedMask && type && model) {
       handleNewDialog({ type: 'generating' })
@@ -144,7 +141,7 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
 
       if (enterPrompt) formData.append('prompt', enterPrompt);
 
-      django({ url: '/uploadImg/', method: 'post', data: formData })
+      django({ url: '/generate/', method: 'post', data: formData })
         .then(res => {
           setResult(res.data.msg);
           if (res.data.msg === "inpainted") {
@@ -155,7 +152,7 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
               }
             }).then(res => {
               setOutputSrc(res.data.img)
-              handleNewDialog({ type: 'output', type, model, prompt: enterPrompt, src: res.data.img })
+              handleNewDialog({ type: 'output', gType:type, model, prompt: enterPrompt, src: res.data.img })
               setGenerateState(false)
             })
           }
@@ -170,6 +167,9 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
   const Options = () => {
     return(
       <Box sx={{p:2}}>
+        <Button size="large" sx={{width:"100%"}} variant="contained" onClick={generateHandler}>
+          Generate
+        </Button>
 
         <Typography variant="h6">选择生成模型</Typography>
         <Select value={model} onChange={(e) => setModel(e.target.value)}>
@@ -184,9 +184,14 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
             </MenuItem>
           ))}
         </Select>
-
+      
         {/* 上傳图片 */}
-        { type === 'text2img'? null: <Typography variant="h6">上傳图片</Typography>}
+        { type === 'text2img'? null: <Box className={classes.flexRow}>
+        <Typography variant="h6">上傳图片</Typography>
+          <IconButton edge="start" sx={{ mr: 2}} onClick={handleOnClickImgUpload}>
+            <AddIcon/>
+          </IconButton>
+        </Box>}
         { type === 'text2img'? null: <Box
           sx={{
             width: "100%",
@@ -212,7 +217,11 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
         </Box>}
 
         {/* 上傳Mask */}
-        { type === 'inpaint'? <Typography variant="h6">上傳遮罩</Typography>:null}
+        { type === 'inpaint'? <Box className={classes.flexRow}>
+          <Typography variant="h6">上傳遮罩</Typography>
+          <IconButton edge="start"sx={{ mr: 2}}
+            onClick={handleOnClickMaskUpload}><AddIcon/></IconButton>
+          </Box>: null}
         { type === 'inpaint'? <Box
           sx={{
             width: "100%",
@@ -288,7 +297,7 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
     >
 
       {!open ? <List>
-        {['change type', 'change model', 'change XX', 'change OO'].map((text, index) => (
+        {['change type', 'change model', 'generate', 'change OO'].map((text, index) => (
           <ListItem button key={text}>
             <ListItemIcon sx={{ pl: .5 }}>{index % 2 === 0 ? <InboxIcon /> : <MailIcon />}</ListItemIcon>
             <ListItemText primary={text} />

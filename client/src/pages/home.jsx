@@ -73,7 +73,8 @@ export function Home() {
   const classes = useStyles();
 
   // Dialogs
-  const [chatDialogs, setChatDialogs] = useState([{ role: 'assistant' }]);
+  const [chatDialogs, setChatDialogs] = useState([{role: "assistant"}]);
+  const [messages, setMessages] = useState([])
   const helloText = "Hello!這裡是TY的Thangka Inpaint DEMO."
 
   // params
@@ -81,10 +82,19 @@ export function Home() {
   const [enterPrompt, setEnterPrompt] = useState("");
 
   useEffect(() => {
+    console.log(chatDialogs)
   }, [chatDialogs]);
 
   const handleNewDialog = (args) => {
     setChatDialogs([...chatDialogs, args])
+  }
+
+  const handleMessages = (args) => {
+    setMessages([...messages, args])
+    let list = chatDialogs
+    list.push(args)
+    setChatDialogs(list)
+    
   }
 
   //Drawer
@@ -96,7 +106,7 @@ export function Home() {
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1,p:0 }}>
       <Avatar sx={{ bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1 }}>TY</Avatar>
       <Card variant="outlined"
-            className={classes.columnCenter}
+            className={classes.flexColCenter}
             sx={{ maxWidth: 360, p:1}}>
           <Typography>{key<1 ? helloText : item.content}</Typography>
       </Card>
@@ -127,7 +137,7 @@ export function Home() {
   const generatingDialog = (key) => (
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1, mb: 1 }}>
       <Avatar sx={{ bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1 }}>M</Avatar>
-      <Card sx={{ p: 1, mr: 1 }} className={classes.columnCenter}>
+      <Card sx={{ p: 1, mr: 1 }} className={classes.flexColCenter}>
         <Typography variant="h6" sx={{ mb: 1 }}>
           Generating...
         </Typography>
@@ -139,7 +149,7 @@ export function Home() {
   const userDialog = (item, key) => (
     <Box key={key} display="flex" flexDirection="row" justifyContent="right" sx={{ mt: 1, mr: 1 }}>
       <Card variant="outlined"
-            className={classes.columnCenter}
+            className={classes.flexColCenter}
             sx={{ maxWidth: 360, p:1, mr:1}}>
           <Typography>{item.content}</Typography>
       </Card>
@@ -176,9 +186,8 @@ export function Home() {
     <Box className={classes.root}>
       <CssBaseline />
       <NavBar
-        inputText={inputText} setInput={setInput}
-        setEnterPrompt={setEnterPrompt}
-        chatDialogs={chatDialogs} setChatDialogs={setChatDialogs}
+        inputText={inputText} setInput={setInput} setEnterPrompt={setEnterPrompt}
+        messages={messages} handleMessages={handleMessages}
         drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} setLabelOpen={setLabelDrawerOpen}/>
       <SettingDrawer open={drawerOpen}
         handleNewDialog={handleNewDialog}

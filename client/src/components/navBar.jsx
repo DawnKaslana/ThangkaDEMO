@@ -43,7 +43,7 @@ import { server, django, file_url } from '../api.js'
 
 const NavBar = ({
     inputText, setInput, setEnterPrompt,
-    chatDialogs, setChatDialogs,
+    messages, handleMessages,
     drawerOpen, setDrawerOpen, setLabelOpen
 }) => {
     // CSS
@@ -53,12 +53,9 @@ const NavBar = ({
     const handleDrawerOpen = () => {setDrawerOpen(true);};
     const handleDrawerClose = () => {setDrawerOpen(false);};
 
-    // record messages
-    const [messages, setMessages] = useState([])
-
     // 對話管理功能:清除歷史
     const deleteDialogs = () => {
-        setChatDialogs([{ role: 'assistant'}])
+        // setChatDialogs([{ role: 'assistant'}])
         setEnterPrompt(null)
     }
 
@@ -66,10 +63,9 @@ const NavBar = ({
     const enterTextHanlder = () => {
         //update user messages
         setEnterPrompt(inputText)
-        let userArgs = { role: "user", content: inputText }
-        let aiArgs = {}
-        setMessages([...messages, userArgs])
-        setChatDialogs([...messages, userArgs])
+        let userArgs = { "role": "user", "content": inputText }
+        handleMessages(userArgs)
+
         setInput("")
 
         let messagesList = messages
@@ -77,17 +73,11 @@ const NavBar = ({
         const formData = new FormData();
         formData.append('messages', JSON.stringify(messagesList));
 
-
         django({ url: '/chat/', method: 'post', data: formData })
         .then(res=>{
-            aiArgs = res.data
+            handleMessages(res.data)
+
         })
-
-        //update ai messages
-        setMessages([...messages, aiArgs])
-        setChatDialogs([...messages, aiArgs])
-
-        console.log(messages)
 
         
     }
