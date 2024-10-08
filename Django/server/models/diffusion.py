@@ -1,12 +1,13 @@
 from os.path import join
-from diffusers import StableDiffusionPipeline, DiffusionPipeline, UNet2DConditionModel, EulerDiscreteScheduler, \
+from diffusers import StableDiffusionPipeline, DDIMScheduler, \
     StableDiffusionImg2ImgPipeline, \
-    StableDiffusionInpaintPipeline
+    StableDiffusionInpaintPipeline, \
+    StableDiffusionControlNetInpaintPipeline, ControlNetModel
 import torch
 import time
 import numpy as np
-from PIL import Image, ImageChops
-import tqdm
+from PIL import Image, ImageChops, ImageOps
+from . import images
 
 '''
 export TRANSFORMERS_CACHE=/media/brl2022-1/brl2022-1-1/xty/huggingface/hub/
@@ -15,88 +16,106 @@ export HUGGINGFACE_HUB_CACHE=/media/brl2022-1/brl2022-1-1/xty/huggingface/hub/
 '''
 torch.cuda.set_device(0)
 
-
+"""
+presetting
+"""
 sd_model_path = "/mnt/Workspace/SDmodels/"
+cn_model_path = "/mnt/Workspace/SDmodels/CN"
 model_path = "/mnt/Workspace/SDmodels/Lora/"
 filePath = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media"
 output_path = join(filePath,"output")
 
-def MaskToTranspaent(img, mask):
-    datas = img.getdata()
-    mask = mask.convert("RGBA")
-    maskdatas = mask.getdata()
-    newimage = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    newData = []
-    # print(len(datas),len(maskdatas))
 
-    for idx, item in enumerate(datas):
-        if maskdatas[idx][0]==255:
-            newData.append((255, 255, 255, 0))
-        else:
-            newData.append(item)
-    newimage.putdata(newData)
-    return newimage
+def changeModel(generateType, model):
+    if generateType == "inpaint":
+        if model == "SDI2":
+            premodel_abspath = join(sd_model_path, "SDI2")  # SD21/SDI2
+            pipe = StableDiffusionInpaintPipeline.from_pretrained(
+                premodel_abspath,
+                torch_dtype=torch.float16)
+        if model == "CN":
+            premodel_abspath = join(sd_model_path, "SD15")
+            cnmodel_abspath = join(cn_model_path, "control_v11p_sd15_inpaint")
+            controlnet = ControlNetModel.from_pretrained(
+                cnmodel_abspath,
+                torch_dtype=torch.float16,
+                use_safetensors=True,
+            )
+            pipe = StableDiffusionControlNetInpaintPipeline.from_pretrained(
+                premodel_abspath, controlnet=controlnet,
+                torch_dtype=torch.float16,
+                use_safetensors=True,
+            )
+            pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
 
-def WhiteToTranspaent(img):
-    datas = img.getdata()
-    newimage = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    newData = []
-
-    for item in datas:
-        if item[0] > 127 and item[0] == item[1] == item[2]:
-            newData.append(item)
-        else:
-            newData.append((255, 255, 255, 0))
-
-    newimage.putdata(newData)
-    return newimage
-
-premodel_abspath = join(sd_model_path,"SDI2")  # SD21/SDI2
-print(premodel_abspath)
-# scheduler = EulerDiscreteScheduler.from_pretrained(premodel_abspath, subfolder="scheduler")
-pipe = StableDiffusionInpaintPipeline.from_pretrained(premodel_abspath,
-                                                      # scheduler=scheduler,
-                                                      torch_dtype=torch.float16,
-                                                      use_safetensors=True, )
-                                                      # variant="fp16",)
-pipe.load_lora_weights(join(model_path,"thangka_ACD"), weight_name="pytorch_lora_weights.safetensors")
-# this model type use lora model no need convert
-# model_id = "checkpoint-25000" #if needed
-pipe.to("cuda")
+    # load lora
+    pipe.load_lora_weights(join(model_path, "thangka_ACD"), weight_name="pytorch_lora_weights.safetensors")
+    # model_id = "checkpoint-25000" #if needed
+    # load pipe
+    pipe.to("cuda")
+    return pipe
 
 
-def inpaint(fileName, maskName, text, steps, type, SDModel, maskImg):
-    print(fileName, maskName, text, steps, type, SDModel, maskImg)
+# pipe = changeModel("inpaint", "SDI2")
 
+
+"""
+main func : inpaint text2img img2img img2text
+"""
+def inpaint(fileName, maskName, text, steps, type, SDModel):
+    # param check
+    print(fileName, maskName, text, steps, type, SDModel)
     if not text: text = ""
-    steps = int(steps) if eval(steps) else 10
-    image = Image.open(join(filePath, fileName)).resize((512,512)) # image = image.convert("RGB")
-    mask_image = Image.open(join(filePath, maskName)).resize((512, 512))
+    nagative_prompt = "bad,ugly,disfigured,blurry,watermark,normal quality,jpeg artifacts,low quality,worst quality,cropped,low res"
+    steps = int(steps) if eval(steps) else 30
+    SDModel = "CNI" #SDI2 SD2 CNI
 
-    # if maskImg:
-    #     image = MaskToTranspaent(image, mask_image)
-    #
-    # image.show(title="image")
-    # mask_image.show(title="mask_image")
+    # process image & mask  &  image_masked
+    image = Image.open(join(filePath, fileName)).convert("RGBA").resize((512,512))
+    image = images.flatten(image, "#ffffff")
+    mask_image = Image.open(join(filePath, maskName)).resize((512,512))
+    mask_image = images.create_binary_mask(mask_image)
+    image = images.fill(image, mask_image)
 
-    output = pipe(prompt=text,
-                  image=image,
-                  mask_image=mask_image,
-                  num_inference_steps=steps,
-                  strength=1,#(0~1)
-                  # num_images_per_prompt=1,
-                  nagative_prompt="bad,ugly,disfigured,blurry,watermark,normal quality,jpeg artifacts,low quality,worst quality,cropped,low res,",
-                  guidance_scale=7.5).images[0]
+    if SDModel == "CN":
+        control_image = images.make_inpaint_condition(image, mask_image)
 
+    if SDModel == "SDI":
+        output = pipe(prompt=text,
+            image=image,
+            mask_image=mask_image,
+            num_inference_steps=steps, #steps
+            # strength=1,#(0~1)
+            # num_images_per_prompt=1,
+            nagative_prompt=nagative_prompt,
+            # guidance_scale=7.5
+            ).images[0]
+    else:
+        generator = torch.Generator(device="cpu").manual_seed(1)
+        output = pipe(
+            prompt=text,
+            num_inference_steps=steps,
+            generator=generator,
+            eta=1.0,
+            image=image,
+            mask_image=mask_image,
+            control_image=control_image,
+        ).images[0]
 
+    # output
     newimage = Image.new('RGBA', image.size, (0, 0, 0, 0))
     newimage.paste(image, (0, 0))
-    mask_image = WhiteToTranspaent(mask_image)
     newimage.paste(output, (0, 0), mask_image)
 
-    # output.show(title="output")
-    # newimage.show(title="newimage")
+    # output.show()
 
-    time.sleep(0.5)
     newimage.save(join(output_path,fileName[:-4]+"_output.png"))
 
+def text2img():
+    print("")
+
+def img2img():
+    print("")
+
+def img2text():
+    print("")

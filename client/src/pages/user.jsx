@@ -8,6 +8,7 @@ import Cookies from 'universal-cookie';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
+import CssBaseline from '@material-ui/core/CssBaseline';
 import Typography from '@mui/material/Typography';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -201,6 +202,7 @@ export function User() {
 
     return(
     <Box sx={{height: '100vh',display: 'flex', flexDirection:'column', alignItems:'center'}}>
+        <CssBaseline />
         <Box sx={{display: 'flex',
             width:{xs: '90vw', sm: '80vw', md:'60vw', lg:'40vw'}, 
             flexDirection:'row',

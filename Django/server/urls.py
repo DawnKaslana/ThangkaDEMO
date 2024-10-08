@@ -22,7 +22,7 @@ from django.http import JsonResponse
 # from .models import gpt_api
 # from .models import clip_api
 from .models import save_file
-
+from .models import ernie_bot
 
 def helloWorld(request):
     return JsonResponse({'result': 'hello world!'})
@@ -32,12 +32,11 @@ urlpatterns = [
     path('getToken/', save_file.getToken),
     path('admin/', admin.site.urls),
     path('test/', save_file.test),
-    # path('uploadTest', hymenoptera.get_user_file), #要刪掉
-    # path('text_emotion', bert_basic_emotion.get_user_text),
     # path('text_generate', gpt_api.getPrompt),
     path('uploadImg/', save_file.user_img),
     path('getImg/', save_file.send_img),
+    path('changePipe/', save_file.changePipe),
+    path('chat/', ernie_bot.chat)
     # path('processVideo', clip_api.process_video),
     # path('clipCap', clip_api.call_clipCap),
-
 ]

@@ -25,8 +25,6 @@ def user_img(request):
         steps = request.POST.get("steps")
         type = request.POST.get("type")
         SDModel = request.POST.get("SDModel")
-        maskImg = request.POST.get("maskImg")
-        print(type,SDModel)
 
         with open('./server/media/'+imagefile.name,'wb') as fp:
             for chunk in imagefile.chunks():
@@ -35,7 +33,7 @@ def user_img(request):
             for chunk in maskfile.chunks():
                 fp.write(chunk)
         if type == "Image Inpaint":
-            diffusion.inpaint(imagefile.name, maskfile.name, prompt, steps, type, SDModel, maskImg)
+            diffusion.inpaint(imagefile.name, maskfile.name, prompt, steps, type, SDModel)
             return JsonResponse({'msg': "inpainted"})
         return JsonResponse({'msg': "uploaded"})
 
@@ -47,3 +45,13 @@ def send_img(request):
             data = f.read()
             result["img"] = bytes.decode(base64.b64encode(data))
             return JsonResponse(result)
+
+
+def changePipe(request):
+    if request.method == 'POST':
+        generateType = request.POST.get("type")
+        model = request.POST.get("model")
+        print(generateType, model)
+
+        diffusion.changeModel(generateType, model)
+        return JsonResponse({'msg': "changed"})
