@@ -42,9 +42,10 @@ import useStyles from '../css/style';
 import { server, django, file_url } from '../api.js'
 
 const NavBar = ({
-    inputText, setInput, setEnterPrompt,
+    inputText, setInput,
     messages, handleMessages,
-    drawerOpen, setDrawerOpen, setLabelOpen
+    drawerOpen, setDrawerOpen, setLabelOpen,
+    handleNewDialog, deleteDialogs
 }) => {
     // CSS
     const classes = useStyles();
@@ -53,18 +54,12 @@ const NavBar = ({
     const handleDrawerOpen = () => {setDrawerOpen(true);};
     const handleDrawerClose = () => {setDrawerOpen(false);};
 
-    // 對話管理功能:清除歷史
-    const deleteDialogs = () => {
-        // setChatDialogs([{ role: 'assistant'}])
-        setEnterPrompt(null)
-    }
-
     // 新增messages & call 文心一言
     const enterTextHanlder = () => {
         //update user messages
-        setEnterPrompt(inputText)
         let userArgs = { "role": "user", "content": inputText }
         handleMessages(userArgs)
+        handleNewDialog({ type: 'speak' })
 
         setInput("")
 
@@ -75,8 +70,8 @@ const NavBar = ({
 
         django({ url: '/chat/', method: 'post', data: formData })
         .then(res=>{
+            console.log(res.data)
             handleMessages(res.data)
-
         })
 
         

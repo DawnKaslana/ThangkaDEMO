@@ -25,9 +25,31 @@ model_path = "/mnt/Workspace/SDmodels/Lora/"
 filePath = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media"
 output_path = join(filePath,"output")
 
+typeSet = "text2img"
+modelSet = "SD21"
+
+def loadModel(generateType, model):
+    global typeSet
+    global modelSet
+    global pipe
+    pipe = changeModel(generateType, model)
+    pipe.to("cuda")
+    typeSet = generateType
+    modelSet = model
 
 def changeModel(generateType, model):
     if generateType == "inpaint":
+        list = ["SD15", "SD21", "SDI2", "CNI"]
+        if model == "SD15":
+            premodel_abspath = join(sd_model_path, "SD15")  # SD21/SDI2
+            pipe = StableDiffusionInpaintPipeline.from_pretrained(
+                premodel_abspath,
+                torch_dtype=torch.float16)
+        if model == "SD21":
+            premodel_abspath = join(sd_model_path, "SD21")  # SD21/SDI2
+            pipe = StableDiffusionInpaintPipeline.from_pretrained(
+                premodel_abspath,
+                torch_dtype=torch.float16)
         if model == "SDI2":
             premodel_abspath = join(sd_model_path, "SDI2")  # SD21/SDI2
             pipe = StableDiffusionInpaintPipeline.from_pretrained(
@@ -47,15 +69,33 @@ def changeModel(generateType, model):
                 use_safetensors=True,
             )
             pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
+    if generateType == "text2img":
+        list = ["SD15", "SD21"]
+        if model not in list: model == "SD21"
+        if model == "SD15":
+            premodel_abspath = join(sd_model_path, "SD15")
+            pipe = StableDiffusionPipeline.from_pretrained(
+                premodel_abspath,
+                torch_dtype=torch.float16)
+        if model == "SD21":
+            premodel_abspath = join(sd_model_path, "SD21")
+            pipe = StableDiffusionPipeline.from_pretrained(
+                premodel_abspath,
+                torch_dtype=torch.float16)
 
     # load lora
     # pipe.load_lora_weights(join(model_path, "thangka_ACD"), weight_name="pytorch_lora_weights.safetensors")
     # model_id = "checkpoint-25000" #if needed
     return pipe
 
-# load pipe
-# pipe = changeModel("inpaint", "CNI")
-# pipe.to("cuda")
+
+# # load pipe first time
+pipe = changeModel(typeSet, modelSet)
+pipe.to("cuda")
+
+
+def getModelType():
+    return({'model':modelSet, 'type':typeSet})
 
 """
 process
@@ -121,8 +161,11 @@ def inpaint(fileName, maskName, text, steps, SDModel):
 
     newimage.save(join(output_path,fileName[:-4]+"_output.png"))
 
-def text2img():
-    print("")
+def text2img(prompt, filename):
+    print('prompt'+str(prompt))
+    output = pipe('flower').images[0]
+    output.save(join(output_path,filename+".png"))
+    print('callText2img')
 
 def img2img():
     print("")

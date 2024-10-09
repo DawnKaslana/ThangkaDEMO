@@ -21,7 +21,7 @@ const useStyles = makeStyles((theme) => ({
         duration: theme.transitions.duration.enteringScreen,
       }),
     },
-    hide: {
+    hide: { 
       display: 'none',
     },
     drawer: {

@@ -1,7 +1,8 @@
 // React and Basic import
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import axios from "axios";
+import { useNavigate } from 'react-router-dom';
+import Cookies from 'universal-cookie';
 
 // React MUI import
 import Avatar from '@mui/material/Avatar';
@@ -49,6 +50,7 @@ import defaultImage from '../images/defaultImage.jpeg'
 import NavBar from '../components/navBar.jsx';
 import SettingDrawer from '../components/settingDrawer.jsx';
 import LabelDrawer from '../components/labelDrawer.jsx';
+import loadImg from '../images/purpleLoader-crop.gif'
 
 //Icon import
 import UploadIcon from '@mui/icons-material/Upload';
@@ -67,10 +69,29 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 //api
 import { server, django, file_url } from '../api.js'
 
+// cookie
+const cookies = new Cookies();
+
 
 //Main
 export function Home() {
   const classes = useStyles();
+
+  // login setting
+  const navigate = useNavigate();
+  const [userId, setUserId] = useState(cookies.get('user_id'));
+  const [userName, setUserName] = useState(cookies.get('user_name'));
+
+  useEffect(() => {
+    if (!userId) navigate('/login');
+  }, []);
+
+
+  const logout = () => {
+    cookies.remove('user_id', { path: '/' });
+    cookies.remove('user_name', { path: '/' });
+    navigate('/login');
+  }
 
   // Dialogs
   const [chatDialogs, setChatDialogs] = useState([{role: "assistant"}]);
@@ -79,35 +100,139 @@ export function Home() {
 
   // params
   const [inputText, setInput] = useState("");
-  const [enterPrompt, setEnterPrompt] = useState("");
 
-  useEffect(() => {
-    console.log(chatDialogs)
-  }, [chatDialogs]);
+  // generate params
+  const [prompt, setPrompt] = useState('purple lotus')
+  const [type, setType] = useState('inpaint')
+  const [model, setModel] = useState('CNI')
+  const [imageCount, setImageCount] = useState(1)
+  const [steps, setSteps] = useState(10)
+  const [loading, setLoading] = useState(false);
+  const [generateState, setGenerateState] = useState(false)
+  const [selectedImg, setSelectedImg] = useState(null);
+  const [selectedMask, setSelectedMask] = useState(null);
+
+  const [inputError, setInputError] = useState(false);
+  const [result, setResult] = useState('');
+  const [outputSrc, setOutputSrc] = useState(null);
+
 
   const handleNewDialog = (args) => {
     setChatDialogs([...chatDialogs, args])
   }
 
-  const handleMessages = (args) => {
-    setMessages([...messages, args])
-    let list = chatDialogs
-    list.push(args)
-    setChatDialogs(list)
-    
+  const deleteDialogs = () => {
+    setChatDialogs([{ role: 'assistant'}])
+    setMessages([])
   }
+
+  const handleMessages = (args) => {
+    if (args.content) {
+      setMessages([...messages, args])
+      let list = chatDialogs
+      list.push(args)
+      setChatDialogs(list)
+    } else {
+      let list = chatDialogs
+      setChatDialogs(list)
+    }
+    if (args.command) {
+      console.log(args.command)
+      generateHandler(args.command)
+    }
+  }
+
+  const generateHandler = () => {
+    if (type == 'inpaint'){
+      inpaintGenerate()
+    } else if (type == 'text2img'){
+      text2imgGenerate()
+    }
+  }
+
+  const inpaintGenerate = () => {
+    const formData = new FormData();
+    if (selectedImg && selectedMask && type && model) {
+      handleNewDialog({ type: 'generating' })
+      setInputError(false)
+      setGenerateState(true)
+      formData.append('prompt', prompt);
+      formData.append('image', selectedImg);
+      formData.append('mask', selectedMask);
+      formData.append('steps', steps);
+      formData.append('type', type);
+      formData.append('SDModel', model);
+
+      django({ url: '/generate/', method: 'post', data: formData })
+        .then(res => {
+          setResult(res.data.msg);
+          if (res.data.msg === "successed") {
+            console.log(selectedImg.name.slice(0, -4) + "_output.png")
+            django({
+              url: '/getImg/', method: 'get', params: {
+                imageName: selectedImg.name.slice(0, -4) + "_output.png"
+              }
+            }).then(res => {
+              setOutputSrc(res.data.img)
+              handleNewDialog({ type: 'output', gType:type, model, prompt: prompt, src: res.data.img })
+              setGenerateState(false)
+            })
+          }
+        }).catch((err)=>setGenerateState(false))
+
+    } else {
+      setInputError(true)
+    }
+  }
+
+  const text2imgGenerate = () => {
+    const formData = new FormData();
+    if (prompt) {
+      handleNewDialog({ type: 'generating' })
+      setInputError(false)
+      setGenerateState(true)
+      let filename = userId + "_text2img_" + new Date().getTime()
+      formData.append('filename', filename);
+      formData.append('steps', steps);
+      formData.append('type', type);
+      formData.append('SDModel', model);
+
+      django({ url: '/generate/', method: 'post', data: formData })
+        .then(res => {
+          setResult(res.data.msg);
+          if (res.data.msg === "successed") {
+            console.log(filename + ".png")
+            django({
+              url: '/getImg/', method: 'get', params: {
+                imageName: filename + ".png"
+              }
+            }).then(res => {
+              setOutputSrc(res.data.img)
+              handleNewDialog({ type: 'output', gType:type, model, prompt: prompt, src: res.data.img })
+              setGenerateState(false)
+            })
+          }
+        }).catch((err)=>setGenerateState(false))
+
+    } else {
+      setInputError(true)
+    }
+  }
+
 
   //Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [labelDrawerOpen, setLabelDrawerOpen] = useState(false);
 
-
+  const AIAvatar = () => (
+    <Avatar sx={{bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1}}>TY</Avatar>
+  )
   const AIDialog = (item, key) => (
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1,p:0 }}>
-      <Avatar sx={{ bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1 }}>TY</Avatar>
+      <AIAvatar/>
       <Card variant="outlined"
             className={classes.flexColCenter}
-            sx={{ maxWidth: 360, p:1}}>
+            sx={{ maxWidth: '50vw', p:1}}>
           <Typography>{key<1 ? helloText : item.content}</Typography>
       </Card>
       <AlwaysScrollToView />
@@ -116,14 +241,14 @@ export function Home() {
 
   const outputDialog = (item, key) => (
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1 }}>
-      <Avatar sx={{ bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1 }}>M</Avatar>
+      <AIAvatar/>
       <Card sx={{ p: 1, mr: 1 }}>
         <Box><RViewerJS ><img src={"data:image/png;base64," + item.src} /></RViewerJS></Box>
         <Typography variant="body2" color="text.secondary">
-          模式：{item.generateType}
+          模式：{item.gType}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          生成模型：{item.SDMvalue}
+          生成模型：{item.model}
         </Typography>
         {item.prompt ?
           <Typography variant="body2" color="text.secondary">
@@ -136,7 +261,7 @@ export function Home() {
 
   const generatingDialog = (key) => (
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1, mb: 1 }}>
-      <Avatar sx={{ bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1 }}>M</Avatar>
+      <AIAvatar/>
       <Card sx={{ p: 1, mr: 1 }} className={classes.flexColCenter}>
         <Typography variant="h6" sx={{ mb: 1 }}>
           Generating...
@@ -146,18 +271,29 @@ export function Home() {
     </Box>
   )
 
+  const speakDialog = (key) => (
+    <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1,p:0 }}>
+      <AIAvatar/>
+      <Card variant="outlined"
+          className={classes.flexColCenter}
+          sx={{ maxWidth: '50vw', p:1}}>
+          <img src={loadImg} width="80px" alt="load gif"/>
+      </Card>
+    </Box>
+  )
+
   const userDialog = (item, key) => (
     <Box key={key} display="flex" flexDirection="row" justifyContent="right" sx={{ mt: 1, mr: 1 }}>
       <Card variant="outlined"
             className={classes.flexColCenter}
-            sx={{ maxWidth: 360, p:1, mr:1}}>
+            sx={{ maxWidth: '50vw', p:1, mr:1}}>
           <Typography>{item.content}</Typography>
       </Card>
-      <Avatar sx={{ bgcolor: '#296bae', width: 56, height: 56 }}>U</Avatar>
+      <Avatar sx={{bgcolor: '#296bae', width: 56, height: 56}}>U</Avatar>
       <AlwaysScrollToView />
     </Box>
   )
-
+  
 
   const showDialog = (chatDialogs) => {
     let dialogs = []
@@ -166,6 +302,8 @@ export function Home() {
         dialogs.push(AIDialog(chatDialogs[idx], idx))
       } else if (chatDialogs[idx].role === 'user') {
         dialogs.push(userDialog(chatDialogs[idx], idx))
+      } else if (chatDialogs[idx].type === 'speak') {
+        dialogs.push(speakDialog(idx))
       } else if (chatDialogs[idx].type === 'generating') {
         dialogs.push(generatingDialog(idx))
       } else if (chatDialogs[idx].type === 'output') {
@@ -186,12 +324,22 @@ export function Home() {
     <Box className={classes.root}>
       <CssBaseline />
       <NavBar
-        inputText={inputText} setInput={setInput} setEnterPrompt={setEnterPrompt}
-        messages={messages} handleMessages={handleMessages}
+        inputText={inputText} setInput={setInput}
+        messages={messages} handleNewDialog={handleNewDialog}
+        handleMessages={handleMessages} deleteDialogs={deleteDialogs}
         drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} setLabelOpen={setLabelDrawerOpen}/>
       <SettingDrawer open={drawerOpen}
         handleNewDialog={handleNewDialog}
-        enterPrompt={enterPrompt}
+        generateHandler={generateHandler}
+        prompt={prompt} setPrompt={setPrompt}
+        type={type} setType={setType}
+        model={model} setModel={setModel}
+        imageCount={imageCount} setImageCount={setImageCount}
+        steps={steps} setSteps={setSteps}
+        loading={loading} setLoading={setLoading}
+        generateState={generateState} setGenerateState={setGenerateState}
+        selectedImg={selectedImg} setSelectedImg={setSelectedImg}
+        selectedMask={selectedMask} setSelectedMask={setSelectedMask}
       />
       <LabelDrawer open={labelDrawerOpen} setLabelOpen={setLabelDrawerOpen}/>
       <Container disableGutters maxWidth={false} sx={{ m: 0, pb: 10, overflow: 'auto', height: '100vh' }} >

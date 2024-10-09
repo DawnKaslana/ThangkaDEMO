@@ -25,7 +25,14 @@ import Tab from '@material-ui/core/Tab';
 import TabContext from '@material-ui/lab/TabContext';
 import TabList from '@material-ui/lab/TabList';
 import TabPanel from '@material-ui/lab/TabPanel';
-
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import PropTypes from 'prop-types';
+import LinearProgress from '@mui/material/LinearProgress';
 
 //Icon import
 import InboxIcon from '@mui/icons-material/MoveToInbox';
@@ -49,6 +56,7 @@ import AddIcon from '@mui/icons-material/Add';
 
 // other func
 import RViewerJS from 'viewerjs-react'
+import LinearWithValueLabelProgress from './progress.jsx'
 
 // CSS
 import useStyles from '../css/style';
@@ -59,9 +67,21 @@ import { server, django, file_url } from '../api.js'
 // cookie
 const cookies = new Cookies();
 
-const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
+const SettingDrawer = ({ open, handleNewDialog, generateHandler,
+  prompt, setPrompt,
+  type, setType,
+  model, setModel,
+  imageCount, setImageCount,
+  steps, setSteps,
+  loading, setLoading,
+  generateState, setGenerateState,
+  selectedImg, setSelectedImg,
+  selectedMask, setSelectedMask
+
+}) => {
   const theme = useTheme();
   const classes = useStyles();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
   // login setting
   const navigate = useNavigate();
@@ -72,34 +92,29 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
     if (!userId) navigate('/login');
   }, []);
 
+
   const logout = () => {
     cookies.remove('user_id', { path: '/' });
     cookies.remove('user_name', { path: '/' });
     navigate('/login');
   }
 
-  // generate params
-  const [type, setType] = useState('inpaint')
-  const [model, setModel] = useState('CNI')
-  const [imageCount, setImageCount] = useState(1)
-  const [steps, setSteps] = useState(10)
-  const [progress, setProgress] = useState(false);
-  const [generateState, setGenerateState] = useState(false)
-  const [selectedImg, setSelectedImg] = useState(null);
-  const [selectedMask, setSelectedMask] = useState(null);
-  const [inputError, setInputError] = useState(false);
+  // 讀取後端的模型狀態
+  useEffect(() => {
+    django({ url: '/getPipeType/', method: 'get'})
+    .then(res => {
+      console.log(res.data)
+      setType(res.data.type)
+      setModel(res.data.model)
+    })
+    .catch((err)=>setGenerateState(false))
+  }, []);
 
   // img Src
   const [imageSrc, setImageSrc] = useState(null);
   const [maskSrc, setMaskSrc] = useState(null);
-  const [result, setResult] = useState('');
-  const [outputSrc, setOutputSrc] = useState(null);
   const inputImgRef = useRef();
   const inputMaskRef = useRef();
-
-  const handleChange = (event, value) => {
-    setType(value);
-  };
 
   const handleOnClickImgUpload = () => { inputImgRef.current.click(); };
   const handleOnClickMaskUpload = () => { inputMaskRef.current.click(); };
@@ -127,57 +142,47 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
     }
   };
 
-  const generateHandler = () => {
+  const handleChange = (option, changeValue) => {
+    setLoading(true)
     const formData = new FormData();
-    if (selectedImg && selectedMask && type && model) {
-      handleNewDialog({ type: 'generating' })
-      setInputError(false)
-      setGenerateState(true)
-      formData.append('image', selectedImg);
-      formData.append('mask', selectedMask);
-      formData.append('steps', steps);
-      formData.append('type', type);
-      formData.append('SDModel', model);
-
-      if (enterPrompt) formData.append('prompt', enterPrompt);
-
-      django({ url: '/generate/', method: 'post', data: formData })
+    formData.append('type', option == "type"?changeValue : type);
+    formData.append('model', option == "model"?changeValue : model);
+    django({ url: '/changePipe/', method: 'post', data: formData })
         .then(res => {
-          setResult(res.data.msg);
-          if (res.data.msg === "inpainted") {
-            console.log(selectedImg.name.slice(0, -4) + "_output.png")
-            django({
-              url: '/getImg/', method: 'get', params: {
-                imageName: selectedImg.name.slice(0, -4) + "_output.png"
-              }
-            }).then(res => {
-              setOutputSrc(res.data.img)
-              handleNewDialog({ type: 'output', gType:type, model, prompt: enterPrompt, src: res.data.img })
-              setGenerateState(false)
-            })
+          if (res.data.msg === "successed") {
+            setLoading(false)
           }
         }).catch((err)=>setGenerateState(false))
 
-    } else {
-      setInputError(true)
-    }
+  }
+
+  const handleChangeType = (event, value) => {
+    setType(value);
+    handleChange("type", value)
+  };
+
+  const handleChangeModel = (modelValue) => {
+    setModel(modelValue)
+    handleChange("model", modelValue)
   }
 
 
   const Options = () => {
     return(
       <Box sx={{p:2}}>
-        <Button size="large" sx={{width:"100%"}} variant="contained" onClick={generateHandler}>
+        <Button size="large" sx={{width:"100%"}} variant="contained"
+        onClick={generateHandler}
+        >
           Generate
         </Button>
 
         <Typography variant="h6">选择生成模型</Typography>
-        <Select value={model} onChange={(e) => setModel(e.target.value)}>
+        <Select value={model} onChange={(e)=>handleChangeModel(e.target.value)}>
           {[
-            { value: "SDI2", label: "Stable Diffusion Inpaint 2" },
-            { value: "SD2", label: "Stable Diffusion 2" },
             { value: "CNI", label: "ControlNet Inpaint 2" },
-            { value: "LORA", label: "LORA 模型" },
+            { value: "SDI2", label: "Stable Diffusion Inpaint 2" },
+            { value: "SD21", label: "Stable Diffusion 2.1" },
+            { value: "SD15", label: "Stable Diffusion 1.5" },
           ].map((option) => (
             <MenuItem key={option.value} value={option.value}>
               {option.label}
@@ -273,8 +278,6 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
         MUI的alert bar很好看 上面一條紅色的那個
         */}
 
-
-
       </Box>
     )
   }
@@ -295,6 +298,20 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
         }),
       }}
     >
+      {/* Use for control load Model */}
+      <Dialog
+        fullScreen={fullScreen}
+        fullWidth
+        open={loading}
+        maxWidth={'sm'}
+      >
+        <DialogTitle>
+          {"Loading Model......"}
+        </DialogTitle>
+        <DialogContent>
+          <LinearWithValueLabelProgress maxValue={1000}/>
+        </DialogContent>
+      </Dialog>
 
       {!open ? <List>
         {['change type', 'change model', 'generate', 'change OO'].map((text, index) => (
@@ -309,7 +326,7 @@ const SettingDrawer = ({ open, enterPrompt, handleNewDialog }) => {
       {open ? 
       <TabContext value={type}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <TabList onChange={handleChange} aria-label="generate type tabs">
+          <TabList onChange={handleChangeType} aria-label="generate type tabs">
             <Tab label="inpaint" value="inpaint" />
             <Tab label="text2img" value="text2img" />
             <Tab label="img2img" value="img2img" />
