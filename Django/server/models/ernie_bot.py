@@ -72,23 +72,31 @@ def generateImgByErnie(prompt):
 def text2img(prompt):
     info = diffusion.getModelType()
     content = ""
-    if info['type'] != 'text2img': content = "請先切換為文生圖模式。"
+    command = ""
+    if info['type'] != 'text2img':
+        content = "請先切換為文生圖模式。"
+    else:
+        command = "text2img"
     return JsonResponse({
             "role": "assistant",
             "prompt": prompt,
             "content": content,
-            "command": "text2img",
+            "command": command,
         })
 
 def inpaint(prompt):
     info = diffusion.getModelType()
     content = ""
-    if info['type'] != 'inpaint': content = "請先切換為修復模式。"
+    command = ""
+    if info['type'] != 'inpaint':
+        content = "請先切換為修復模式。"
+    else:
+        command = "inpaint"
     return JsonResponse({
             "role": "assistant",
             "prompt": prompt,
             "content": content,
-            "command": "inpaint",
+            "command": command,
         })
 
 def chat(request):

@@ -68,6 +68,7 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 
 //api
 import { server, django, file_url } from '../api.js'
+import ReactMarkdown from 'react-markdown'
 
 // cookie
 const cookies = new Cookies();
@@ -103,14 +104,33 @@ export function Home() {
 
   // generate params
   const [prompt, setPrompt] = useState('purple lotus')
-  const [type, setType] = useState('inpaint')
-  const [model, setModel] = useState('CNI')
+  const [negative, setNegative] = useState('');
+  const [type, setType] = useState('')
+  const [model, setModel] = useState('')
+  const [loraModel, setLoraModel] = useState('')
   const [imageCount, setImageCount] = useState(1)
   const [steps, setSteps] = useState(10)
+  const [noiseRatio, setNoiseRatio] = useState(1)
+  const [randomSeed, setRandomSeed] = useState(Math.random())
+  const [promptWeight, setPromptWeight] = useState(0.7)
+  
+  // control pramas
   const [loading, setLoading] = useState(false);
   const [generateState, setGenerateState] = useState(false)
   const [selectedImg, setSelectedImg] = useState(null);
   const [selectedMask, setSelectedMask] = useState(null);
+
+  // 讀取後端的模型狀態
+  useEffect(() => {
+    django({ url: '/getPipeType/', method: 'get'})
+    .then(res => {
+      console.log(res.data)
+      setType(res.data.type)
+      setModel(res.data.model)
+      console.log(randomSeed)
+    })
+    .catch((err)=>setGenerateState(false))
+  }, []);
 
   const [inputError, setInputError] = useState(false);
   const [result, setResult] = useState('');
@@ -232,8 +252,8 @@ export function Home() {
       <AIAvatar/>
       <Card variant="outlined"
             className={classes.flexColCenter}
-            sx={{ maxWidth: '50vw', p:1}}>
-          <Typography>{key<1 ? helloText : item.content}</Typography>
+            sx={{ maxWidth: '50vw', pr:1, pl: 1}}>
+        <ReactMarkdown className={classes.reactMarkDown}>{key<1 ? helloText : item.content}</ReactMarkdown>
       </Card>
       <AlwaysScrollToView />
     </Box>
@@ -332,10 +352,15 @@ export function Home() {
         handleNewDialog={handleNewDialog}
         generateHandler={generateHandler}
         prompt={prompt} setPrompt={setPrompt}
+        negative={negative} setNegative={setNegative}
         type={type} setType={setType}
         model={model} setModel={setModel}
+        loraModel={loraModel} setLoraModel={setLoraModel}
         imageCount={imageCount} setImageCount={setImageCount}
         steps={steps} setSteps={setSteps}
+        noiseRatio={noiseRatio} setNoiseRatio={setNoiseRatio}
+        randomSeed={randomSeed} setRandomSeed={setRandomSeed}
+        promptWeight={promptWeight} setPromptWeight={setPromptWeight}
         loading={loading} setLoading={setLoading}
         generateState={generateState} setGenerateState={setGenerateState}
         selectedImg={selectedImg} setSelectedImg={setSelectedImg}

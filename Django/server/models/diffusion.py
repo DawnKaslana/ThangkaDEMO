@@ -165,7 +165,6 @@ def text2img(prompt, filename):
     print('prompt'+str(prompt))
     output = pipe('flower').images[0]
     output.save(join(output_path,filename+".png"))
-    print('callText2img')
 
 def img2img():
     print("")

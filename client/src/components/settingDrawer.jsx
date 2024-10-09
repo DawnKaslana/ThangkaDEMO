@@ -1,10 +1,8 @@
 // React and Basic import
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { makeStyles, useTheme } from '@material-ui/core/styles';
-import Cookies from 'universal-cookie';
 
 // MUI import
 import Box from '@mui/material/Box';
@@ -33,6 +31,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import PropTypes from 'prop-types';
 import LinearProgress from '@mui/material/LinearProgress';
+import Alert from '@mui/material/Alert'; // 增加Alert组件
 
 //Icon import
 import InboxIcon from '@mui/icons-material/MoveToInbox';
@@ -64,51 +63,39 @@ import useStyles from '../css/style';
 //api
 import { server, django, file_url } from '../api.js'
 
-// cookie
-const cookies = new Cookies();
+const modelList = [
+  { value: "CNI", label: "ControlNet Inpaint 2", type: ["inpaint"] },
+  { value: "SDI2", label: "Stable Diffusion Inpaint 2", type: ["inpaint"] },
+  { value: "SD21", label: "Stable Diffusion 2.1", type: ["inpaint", "text2img"] },
+  { value: "SD15", label: "Stable Diffusion 1.5", type: ["inpaint", "text2img"] },
+]
 
-const SettingDrawer = ({ open, handleNewDialog, generateHandler,
+const loraList = [
+    { value: 'Lora1', label: 'Lora1' },
+    { value: 'Lora2', label: 'Lora2' },
+]
+
+
+const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
   prompt, setPrompt,
+  negative, setNegative,
   type, setType,
   model, setModel,
+  loraModel, setLoraModel,
   imageCount, setImageCount,
   steps, setSteps,
   loading, setLoading,
   generateState, setGenerateState,
   selectedImg, setSelectedImg,
-  selectedMask, setSelectedMask
+  selectedMask, setSelectedMask,
+  noiseRatio, setNoiseRatio,
+  randomSeed, setRandomSeed,
+  promptWeight, setPromptWeight
 
 }) => {
   const theme = useTheme();
   const classes = useStyles();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
-
-  // login setting
-  const navigate = useNavigate();
-  const [userId, setUserId] = useState(cookies.get('user_id'));
-  const [userName, setUserName] = useState(cookies.get('user_name'));
-
-  useEffect(() => {
-    if (!userId) navigate('/login');
-  }, []);
-
-
-  const logout = () => {
-    cookies.remove('user_id', { path: '/' });
-    cookies.remove('user_name', { path: '/' });
-    navigate('/login');
-  }
-
-  // 讀取後端的模型狀態
-  useEffect(() => {
-    django({ url: '/getPipeType/', method: 'get'})
-    .then(res => {
-      console.log(res.data)
-      setType(res.data.type)
-      setModel(res.data.model)
-    })
-    .catch((err)=>setGenerateState(false))
-  }, []);
 
   // img Src
   const [imageSrc, setImageSrc] = useState(null);
@@ -153,37 +140,70 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler,
             setLoading(false)
           }
         }).catch((err)=>setGenerateState(false))
-
   }
 
   const handleChangeType = (event, value) => {
-    setType(value);
-    handleChange("type", value)
+    if (value !== type){
+      setType(value);
+      handleChange("type", value)
+    }
   };
 
   const handleChangeModel = (modelValue) => {
-    setModel(modelValue)
-    handleChange("model", modelValue)
+    if (modelValue !== model){
+      setModel(modelValue)
+      handleChange("model", modelValue)
+    }
   }
 
 
   const Options = () => {
     return(
       <Box sx={{p:2}}>
-        <Button size="large" sx={{width:"100%"}} variant="contained"
+        {/* <Button size="large" sx={{width:"100%"}} variant="contained"
         onClick={generateHandler}
         >
           Generate
-        </Button>
+        </Button> */}
+        <Box className={classes.flexColCenter} sx={{mb:1}}>
+          <Button
+            size="large"
+            sx={{
+              width: '95%',
+              backgroundColor: '#800080', // 改成紫色
+              color: 'white',
+              fontSize: '1.2rem',
+              padding: '12px 0',
+              borderRadius: '10px',
+              boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
+              transition: 'transform 0.3s ease',
+              '&:hover': {
+                backgroundColor: '#6a0dad',
+                transform: 'scale(1.05)',
+              },
+            }}
+            variant="contained"
+            startIcon={<SendIcon />}
+            onClick={generateHandler}
+          >
+            Generate
+          </Button>
+        </Box>
 
         <Typography variant="h6">选择生成模型</Typography>
-        <Select value={model} onChange={(e)=>handleChangeModel(e.target.value)}>
-          {[
-            { value: "CNI", label: "ControlNet Inpaint 2" },
-            { value: "SDI2", label: "Stable Diffusion Inpaint 2" },
-            { value: "SD21", label: "Stable Diffusion 2.1" },
-            { value: "SD15", label: "Stable Diffusion 1.5" },
-          ].map((option) => (
+        <Select value={model} onChange={(e)=>handleChangeModel(e.target.value)} fullWidth>
+          {modelList.map((option) => (
+            option.type.includes(type)?
+            <MenuItem key={option.value} value={option.value}>
+              {option.label}
+            </MenuItem>:null
+          ))}
+        </Select>
+
+        {/* 微調模型选择 */}
+        <Typography variant="h6" mt={2}>微調模型选择</Typography>
+        <Select value={loraModel} onChange={(e) => setLoraModel(e.target.value)} fullWidth>
+          {loraList.map((option) => (
             <MenuItem key={option.value} value={option.value}>
               {option.label}
             </MenuItem>
@@ -269,14 +289,68 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler,
           ))}
         </Select>
 
-        {/* 
-        以生成類別type去判斷要顯示哪些選項（改tab的時候會改type）
-        你看一下網路上那些文章 哪些是常用選項 不用太多 現在兩個有點少就是了
-        選項下面給一個大大的生成按鈕 呼叫uploadhanlder func
-        這裡要幫我檢查他有沒有輸入圖片 沒有的話要給一個警告
-        就是檢查他是不是該輸入的都輸了
-        MUI的alert bar很好看 上面一條紅色的那個
-        */}
+        {/* 噪声比例 */}
+        <Typography variant="h6" gutterBottom mt={2}>噪声比例</Typography>
+        <Slider
+          value={noiseRatio}
+          min={0}
+          max={1}
+          step={0.01}
+          onChange={(e, newValue) => setNoiseRatio(newValue)}
+          valueLabelDisplay="auto"
+          sx={{
+            color: '#800080', // 改成紫色
+          }}
+        />
+        <Typography variant="body2">当前噪声比例: {noiseRatio}</Typography>
+
+        {/* 随机种子 */}
+        <Typography variant="h6" gutterBottom mt={2}>随机种子</Typography>
+        <Slider
+          value={randomSeed}
+          min={1}
+          max={100}
+          step={1}
+          onChange={(e, newValue) => setRandomSeed(newValue)}
+          valueLabelDisplay="auto"
+          sx={{
+            color: '#800080', // 改成紫色
+          }}
+        />
+        <Typography variant="body2">当前随机种子: {randomSeed}</Typography>
+
+        {/* 提示权重 */}
+        <Typography variant="h6" gutterBottom mt={2}>提示权重</Typography>
+        <Slider
+          value={promptWeight}
+          min={0.1}
+          max={1}
+          step={0.05}
+          onChange={(e, newValue) => setPromptWeight(newValue)}
+          valueLabelDisplay="auto"
+          sx={{
+            color: '#800080', // 改成紫色
+          }}
+        />
+        <Typography variant="body2">当前提示权重: {promptWeight}</Typography>
+
+
+        {/* 新增的Prompt和Negative输入框 */}
+        <Typography variant="h6" gutterBottom mt={2}>Prompt</Typography>
+        <input
+          type="text"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          style={{ width: '100%', padding: '10px', marginBottom: '15px' }}
+        />
+
+        <Typography variant="h6" gutterBottom>Negative Prompt</Typography>
+        <input
+          type="text"
+          value={negative}
+          onChange={(e) => setNegative(e.target.value)}
+          style={{ width: '100%', padding: '10px', marginBottom: '15px' }}
+        />
 
       </Box>
     )

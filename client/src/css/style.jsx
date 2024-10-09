@@ -66,6 +66,13 @@ const useStyles = makeStyles((theme) => ({
     },
     flexRow: {
       display:"flex",flexDirection:"row", alignItems: 'center'
+    },
+    reactMarkDown: {
+      '& p':{
+        fontSize: '16px',
+        marginBottom: '1em',
+        marginTop: '1em',
+      } 
     }
   }));
   
