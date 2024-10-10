@@ -37,8 +37,10 @@ import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Toolbar from '@mui/material/Toolbar';
-import Tooltip, { tooltipClasses } from '@mui/material/Tooltip';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 
 // CSS
 import useStyles from '../css/style';
@@ -73,6 +75,13 @@ import ReactMarkdown from 'react-markdown'
 // cookie
 const cookies = new Cookies();
 
+const helloText = "Hello!這裡是TY的Thangka Inpaint DEMO."
+const preNegative = "bad,ugly,disfigured,blurry,watermark,normal quality,jpeg artifacts,low quality,worst quality,cropped,low res"
+
+
+const getRandomSeed = () => {
+  return parseInt(Math.random()*(1000000000-1)+1)
+}
 
 //Main
 export function Home() {
@@ -95,93 +104,157 @@ export function Home() {
   }
 
   // Dialogs
-  const [chatDialogs, setChatDialogs] = useState([{role: "assistant"}]);
   const [messages, setMessages] = useState([])
-  const helloText = "Hello!這裡是TY的Thangka Inpaint DEMO."
+  const [chatDialogs, setChatDialogs] = useState([{type:'msg', role: "assistant", content:helloText}]);
 
   // params
   const [inputText, setInput] = useState("");
 
   // generate params
-  const [prompt, setPrompt] = useState('purple lotus')
-  const [negative, setNegative] = useState('');
-  const [type, setType] = useState('')
-  const [model, setModel] = useState('')
-  const [loraModel, setLoraModel] = useState('')
+  const [prompt, setPrompt] = useState('')
+  const [negativePrompt, setNegativePrompt] = useState(preNegative);
+  const [type, setType] = useState('inpaint')
+  const [model, setModel] = useState('SDI2')
+  const [loraModel, setLoraModel] = useState('None')
+  const [loraList, setLoraList] = useState([])
   const [imageCount, setImageCount] = useState(1)
-  const [steps, setSteps] = useState(10)
-  const [noiseRatio, setNoiseRatio] = useState(1)
-  const [randomSeed, setRandomSeed] = useState(Math.random())
-  const [promptWeight, setPromptWeight] = useState(0.7)
+  const [steps, setSteps] = useState(30)
+  const [noiseRatio, setNoiseRatio] = useState(0.5)
+  const [randomSeed, setRandomSeed] = useState(-1)
+  const [promptWeight, setPromptWeight] = useState(7.5)
   
-  // control pramas
-  const [loading, setLoading] = useState(false);
-  const [generateState, setGenerateState] = useState(false)
+  // imgSrc pramas
   const [selectedImg, setSelectedImg] = useState(null);
   const [selectedMask, setSelectedMask] = useState(null);
+  const [result, setResult] = useState('');
+  const [outputSrc, setOutputSrc] = useState(null);
 
   // 讀取後端的模型狀態
   useEffect(() => {
     django({ url: '/getPipeType/', method: 'get'})
     .then(res => {
       console.log(res.data)
-      setType(res.data.type)
+      setType(res.data.type) 
       setModel(res.data.model)
-      console.log(randomSeed)
+      setLoraList(res.data.loraList)
     })
     .catch((err)=>setGenerateState(false))
   }, []);
 
-  const [inputError, setInputError] = useState(false);
-  const [result, setResult] = useState('');
-  const [outputSrc, setOutputSrc] = useState(null);
+  useEffect(() => {
+  }, [chatDialogs]);
 
+  // control pramas
+  const [loading, setLoading] = useState(false);
+  const [generateState, setGenerateState] = useState(false)
+  const [inputError, setInputError] = useState(false)
+  const [errorMsg, setErrorMsg] = useState("")
 
   const handleNewDialog = (args) => {
     setChatDialogs([...chatDialogs, args])
   }
 
   const deleteDialogs = () => {
-    setChatDialogs([{ role: 'assistant'}])
+    setChatDialogs([{ type: 'msg', role: 'assistant', content:helloText}])
     setMessages([])
   }
 
-  const handleMessages = (args) => {
+  const revokeDialogs = () => {
+    if(messages.length>=1){
+      if (chatDialogs.slice(-1)[0].role === "assistant"){
+        setMessages([...messages.slice(0,-2)])
+        setChatDialogs([...chatDialogs.slice(0,-2)])
+      } else {
+        setMessages([...messages.slice(0,-1)])
+        setChatDialogs([...chatDialogs.slice(0,-1)])
+      }
+    }
+  }
+
+  const regenerateDialogs = () => {
+    if(messages.length>=1){
+      if (chatDialogs.slice(-1)[0].role === "assistant"){
+
+        setChatDialogs([...chatDialogs.slice(0, -1), { type: 'load', class: 'speak' }])
+
+        //傳入刪掉百度回覆的訊息列表
+        let messagesList = messages.slice(0, -1)
+        const formData = new FormData();
+        formData.append('messages', JSON.stringify(messagesList));
+
+        django({ url: '/chat/', method: 'post', data: formData })
+        .then(res=>{
+            console.log(res.data)
+            handleMessages(res.data, true)
+        })
+      } 
+    }
+  }
+  
+
+  const handleMessages = (args, rm) => {
     if (args.content) {
-      setMessages([...messages, args])
-      let list = chatDialogs
-      list.push(args)
-      setChatDialogs(list)
+      let chatList
+      if (rm) {
+        setMessages([...messages.slice(0, -1), args])
+        chatList = chatDialogs.slice(0, -1)
+        args["type"] = "msg"
+        chatList.push(args)
+      } else {
+        setMessages([...messages, args])
+        chatList = chatDialogs
+        args["type"] = "msg"
+        chatList.push(args)
+      }
+      setChatDialogs(chatList)
     } else {
       let list = chatDialogs
       setChatDialogs(list)
     }
-    if (args.command) {
-      console.log(args.command)
-      generateHandler(args.command)
+    if (args.command === ('inpaint' || 'text2img' || 'img2img')) {
+      generateHandler(args)
+    } else if (args.command === 'changeParams') {
+      changeParams(args.params)
     }
   }
 
-  const generateHandler = () => {
-    if (type == 'inpaint'){
-      inpaintGenerate()
-    } else if (type == 'text2img'){
-      text2imgGenerate()
-    }
+  const changeParams = (params) => {
+    console.log(params)
+    if (params.prompt) setPrompt(params.prompt)
+    if (params.steps) setSteps(params.steps)
+    if (params.noiseRatio) setNoiseRatio(params.noiseRatio)
   }
 
-  const inpaintGenerate = () => {
+  const generateHandler = (args) => {
+    if (args.prompt)setPrompt(args.prompt)
     const formData = new FormData();
-    if (selectedImg && selectedMask && type && model) {
-      handleNewDialog({ type: 'generating' })
+    formData.append('prompt', args.prompt?args.prompt:prompt);
+    formData.append('negativePrompt', negativePrompt);
+    formData.append('image', selectedImg);
+    formData.append('mask', selectedMask);
+    formData.append('steps', steps);
+    formData.append('seed', randomSeed<0?getRandomSeed():randomSeed);
+    formData.append('strength', noiseRatio);
+    formData.append('guidance', promptWeight);
+    formData.append('imageCount', imageCount);
+    formData.append('type', type);
+    formData.append('SDModel', model);
+    formData.append('loraModelName', loraModel);
+    
+    if (type == 'inpaint'){
+      inpaintGenerate(formData)
+    } else if (type == 'text2img'){
+      text2imgGenerate(formData)
+    } else if (type == 'img2img'){
+      img2imgGenerate(formData)
+    }
+  }
+
+  const inpaintGenerate = (formData) => {
+    if (formData.get('selectedImg') && formData.get('selectedMask')) {
+      handleNewDialog({ type: 'load', class: 'generating' })
       setInputError(false)
       setGenerateState(true)
-      formData.append('prompt', prompt);
-      formData.append('image', selectedImg);
-      formData.append('mask', selectedMask);
-      formData.append('steps', steps);
-      formData.append('type', type);
-      formData.append('SDModel', model);
 
       django({ url: '/generate/', method: 'post', data: formData })
         .then(res => {
@@ -194,7 +267,8 @@ export function Home() {
               }
             }).then(res => {
               setOutputSrc(res.data.img)
-              handleNewDialog({ type: 'output', gType:type, model, prompt: prompt, src: res.data.img })
+              handleNewDialog({ type: 'output', src: res.data.img,
+                pramas: formData})
               setGenerateState(false)
             })
           }
@@ -202,20 +276,19 @@ export function Home() {
 
     } else {
       setInputError(true)
+      if (!selectedImg) setErrorMsg("請輸入待修復圖像。")
+      if (selectedImg && !selectedMask) setErrorMsg("請輸入遮罩圖像。")
     }
   }
 
-  const text2imgGenerate = () => {
-    const formData = new FormData();
-    if (prompt) {
-      handleNewDialog({ type: 'generating' })
+  const text2imgGenerate = (formData) => {
+
+    if (formData.get('prompt')) {
+      handleNewDialog({ type: 'load', class: 'generating' })
       setInputError(false)
       setGenerateState(true)
       let filename = userId + "_text2img_" + new Date().getTime()
       formData.append('filename', filename);
-      formData.append('steps', steps);
-      formData.append('type', type);
-      formData.append('SDModel', model);
 
       django({ url: '/generate/', method: 'post', data: formData })
         .then(res => {
@@ -228,7 +301,8 @@ export function Home() {
               }
             }).then(res => {
               setOutputSrc(res.data.img)
-              handleNewDialog({ type: 'output', gType:type, model, prompt: prompt, src: res.data.img })
+              handleNewDialog({ type: 'output', src: res.data.img,
+                pramas: formData})
               setGenerateState(false)
             })
           }
@@ -236,6 +310,38 @@ export function Home() {
 
     } else {
       setInputError(true)
+      setErrorMsg("請輸入prompt。")
+    }
+  }
+
+  const img2imgGenerate = (formData) => {
+
+    if (formData.get('selectedImg')) {
+      handleNewDialog({ type: 'load', class: 'generating' })
+      setInputError(false)
+      setGenerateState(true)
+
+      django({ url: '/generate/', method: 'post', data: formData })
+        .then(res => {
+          setResult(res.data.msg);
+          if (res.data.msg === "successed") {
+            console.log(selectedImg.name.slice(0, -4) + "_output.png")
+            django({
+              url: '/getImg/', method: 'get', params: {
+                imageName: selectedImg.name.slice(0, -4) + "_output.png"
+              }
+            }).then(res => {
+              setOutputSrc(res.data.img)
+              handleNewDialog({ type: 'output', src: res.data.img,
+                pramas: formData})
+              setGenerateState(false)
+            })
+          }
+        }).catch((err)=>setGenerateState(false))
+
+    } else {
+      setInputError(true)
+      setErrorMsg("請輸入圖像。")
     }
   }
 
@@ -259,22 +365,49 @@ export function Home() {
     </Box>
   )
 
+
   const outputDialog = (item, key) => (
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1 }}>
       <AIAvatar/>
       <Card sx={{ p: 1, mr: 1 }}>
         <Box><RViewerJS ><img src={"data:image/png;base64," + item.src} /></RViewerJS></Box>
-        <Typography variant="body2" color="text.secondary">
-          模式：{item.gType}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          生成模型：{item.model}
-        </Typography>
-        {item.prompt ?
-          <Typography variant="body2" color="text.secondary">
-            prompt：{item.prompt}
-          </Typography> : null
-        }
+        <Box sx={{maxWidth:'500px'}}>
+          <Box className={classes.flexRow}>
+            <Typography variant="body2" sx={{mr:1}} color="text.secondary">
+              模式：{item.pramas.get('type')}
+            </Typography>
+            <Typography variant="body2" sx={{mr:1}} color="text.secondary">
+              生成模型：{item.pramas.get('SDModel')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              微調模型：{item.pramas.get('loraModelName')}
+            </Typography>
+          </Box>
+          <Box className={classes.flexRow}>
+            <Typography variant="body2" sx={{mr:1}} color="text.secondary">
+              生成步數：{item.pramas.get('steps')}
+            </Typography>
+            <Typography variant="body2" sx={{mr:1}} color="text.secondary">
+              雜訊強度：{item.pramas.get('strength')}
+            </Typography>
+            <Typography variant="body2" sx={{mr:1}} color="text.secondary">
+              文本權重：{item.pramas.get('guidance')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              隨機種子：{item.pramas.get('seed')}
+            </Typography>
+          </Box>
+          {item.pramas.get('prompt') ?
+            <Typography variant="body2" color="text.secondary">
+              prompt：{item.pramas.get('prompt')}
+            </Typography> : null
+          }
+          {item.pramas.get('negativePrompt') ?
+            <Typography variant="body2" color="text.secondary">
+              negative prompt：{item.pramas.get('negativePrompt')}
+            </Typography> : null
+          }
+        </Box>
       </Card>
     </Box>
   )
@@ -309,7 +442,7 @@ export function Home() {
             sx={{ maxWidth: '50vw', p:1, mr:1}}>
           <Typography>{item.content}</Typography>
       </Card>
-      <Avatar sx={{bgcolor: '#296bae', width: 56, height: 56}}>U</Avatar>
+      <Avatar sx={{bgcolor: '#296bae', width: 56, height: 56}}>{userName.slice(0,2)}</Avatar>
       <AlwaysScrollToView />
     </Box>
   )
@@ -318,14 +451,14 @@ export function Home() {
   const showDialog = (chatDialogs) => {
     let dialogs = []
     for (let idx in chatDialogs) {
-      if (chatDialogs[idx].role === 'assistant') {
-        dialogs.push(AIDialog(chatDialogs[idx], idx))
-      } else if (chatDialogs[idx].role === 'user') {
+      if (chatDialogs[idx].type === 'msg'){
+        chatDialogs[idx].role === 'assistant'?
+        dialogs.push(AIDialog(chatDialogs[idx], idx)):
         dialogs.push(userDialog(chatDialogs[idx], idx))
-      } else if (chatDialogs[idx].type === 'speak') {
+      } else if (chatDialogs[idx].type === 'load') {
+        chatDialogs[idx].class==="generating"?
+        dialogs.push(generatingDialog(idx)):
         dialogs.push(speakDialog(idx))
-      } else if (chatDialogs[idx].type === 'generating') {
-        dialogs.push(generatingDialog(idx))
       } else if (chatDialogs[idx].type === 'output') {
         dialogs.push(outputDialog(chatDialogs[idx], idx))
       } 
@@ -343,31 +476,44 @@ export function Home() {
   return (
     <Box className={classes.root}>
       <CssBaseline />
+
       <NavBar
         inputText={inputText} setInput={setInput}
         messages={messages} handleNewDialog={handleNewDialog}
         handleMessages={handleMessages} deleteDialogs={deleteDialogs}
+        revokeDialogs={revokeDialogs} regenerateDialogs={regenerateDialogs}
         drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} setLabelOpen={setLabelDrawerOpen}/>
       <SettingDrawer open={drawerOpen}
         handleNewDialog={handleNewDialog}
         generateHandler={generateHandler}
         prompt={prompt} setPrompt={setPrompt}
-        negative={negative} setNegative={setNegative}
-        type={type} setType={setType}
+        negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt}
+        type={type} setType={setType} 
         model={model} setModel={setModel}
-        loraModel={loraModel} setLoraModel={setLoraModel}
+        loraModel={loraModel} setLoraModel={setLoraModel} loraList={loraList}
         imageCount={imageCount} setImageCount={setImageCount}
         steps={steps} setSteps={setSteps}
         noiseRatio={noiseRatio} setNoiseRatio={setNoiseRatio}
-        randomSeed={randomSeed} setRandomSeed={setRandomSeed}
+        randomSeed={randomSeed} setRandomSeed={setRandomSeed} getRandomSeed={getRandomSeed}
         promptWeight={promptWeight} setPromptWeight={setPromptWeight}
         loading={loading} setLoading={setLoading}
         generateState={generateState} setGenerateState={setGenerateState}
         selectedImg={selectedImg} setSelectedImg={setSelectedImg}
         selectedMask={selectedMask} setSelectedMask={setSelectedMask}
+        logout={logout}
       />
       <LabelDrawer open={labelDrawerOpen} setLabelOpen={setLabelDrawerOpen}/>
       <Container disableGutters maxWidth={false} sx={{ m: 0, pb: 10, overflow: 'auto', height: '100vh' }} >
+      <Snackbar 
+        open={inputError}
+        sx={{ width: "80%" }}
+        anchorOrigin={{ vertical:'top', horizontal:'center' }}
+        autoHideDuration={1800}
+        onClose={()=>setInputError(false)}>
+        <Alert severity="error" sx={{ width: '100%' }}>
+          {errorMsg}
+        </Alert>
+      </Snackbar>
         {showDialog(chatDialogs)}
         <AlwaysScrollToView />
       </Container>

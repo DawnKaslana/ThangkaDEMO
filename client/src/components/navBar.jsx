@@ -35,6 +35,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 
+
 // CSS
 import useStyles from '../css/style';
 
@@ -45,7 +46,7 @@ const NavBar = ({
     inputText, setInput,
     messages, handleMessages,
     drawerOpen, setDrawerOpen, setLabelOpen,
-    handleNewDialog, deleteDialogs
+    handleNewDialog, deleteDialogs, revokeDialogs, regenerateDialogs
 }) => {
     // CSS
     const classes = useStyles();
@@ -59,7 +60,7 @@ const NavBar = ({
         //update user messages
         let userArgs = { "role": "user", "content": inputText }
         handleMessages(userArgs)
-        handleNewDialog({ type: 'speak' })
+        handleNewDialog({ type: 'load', class: 'speak' })
 
         setInput("")
 
@@ -97,13 +98,13 @@ const NavBar = ({
 
                 {/* 重新生成 */}
                 <Tooltip title={<h3>regenerate</h3>} placement="top" arrow>
-                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}} onClick={deleteDialogs}>
+                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}} onClick={regenerateDialogs}>
                     <AutorenewIcon />
                 </IconButton>
                 </Tooltip>
                 {/* 撤回消息 */}
                 <Tooltip title={<h3>revoke</h3>} placement="top" arrow>
-                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}} onClick={deleteDialogs}>
+                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}} onClick={revokeDialogs}>
                     <ReplayIcon />
                 </IconButton>
                 </Tooltip>

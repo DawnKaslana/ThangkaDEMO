@@ -141,5 +141,31 @@ def fill(image, mask):
 
     return image_mod.convert("RGB")
 
+def MasktoTransparent(img, mask):
+    datas = img.getdata()
+    mask = mask.convert("RGBA")
+    maskdatas = mask.getdata()
+    newimage = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    newData = []
+    # print(len(datas),len(maskdatas))
+    for idx, item in enumerate(datas):
+        if maskdatas[idx][0]==255:
+            newData.append((255, 255, 255, 0))
+        else:
+            newData.append(item)
+    newimage.putdata(newData)
+    return newimage
+
+def has_transparency(img):
+    if img.mode == 'P':
+        trans = img.info.get("transparency", -1)
+        for _, index in img.getcolors():
+            if index == trans: return True
+    elif img.mode == "RGBA":
+        ext = img.getextrema()
+        if ext[3][0] < 255:
+            return True
+    return False
+
 
 

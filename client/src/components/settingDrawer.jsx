@@ -2,15 +2,17 @@
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import clsx from 'clsx';
-import { makeStyles, useTheme } from '@material-ui/core/styles';
+import { makeStyles, useTheme, createTheme, ThemeProvider } from '@material-ui/core/styles';
 
 // MUI import
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CssBaseline from '@mui/material/CssBaseline';
 import List from '@material-ui/core/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItem from '@material-ui/core/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
 import Divider from '@material-ui/core/Divider';
 import Drawer from '@material-ui/core/Drawer';
 import IconButton from '@mui/material/IconButton';
@@ -31,7 +33,9 @@ import DialogTitle from '@mui/material/DialogTitle';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import PropTypes from 'prop-types';
 import LinearProgress from '@mui/material/LinearProgress';
-import Alert from '@mui/material/Alert'; // 增加Alert组件
+import Alert from '@mui/material/Alert';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 
 //Icon import
 import InboxIcon from '@mui/icons-material/MoveToInbox';
@@ -48,10 +52,16 @@ import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import ImageIcon from '@mui/icons-material/Image';
 import HideImageIcon from '@mui/icons-material/HideImage';
 import MenuIcon from '@mui/icons-material/Menu';
-import ClearIcon from '@mui/icons-material/Clear';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
+import AddBoxIcon from '@mui/icons-material/AddBox';
+import ClearIcon from '@mui/icons-material/Clear';
+import BrokenImageIcon from '@mui/icons-material/BrokenImage';
+import FontDownloadIcon from '@mui/icons-material/FontDownload';
+import CollectionsIcon from '@mui/icons-material/Collections';
+import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 
 // other func
 import RViewerJS from 'viewerjs-react'
@@ -66,22 +76,37 @@ import { server, django, file_url } from '../api.js'
 const modelList = [
   { value: "CNI", label: "ControlNet Inpaint 2", type: ["inpaint"] },
   { value: "SDI2", label: "Stable Diffusion Inpaint 2", type: ["inpaint"] },
-  { value: "SD21", label: "Stable Diffusion 2.1", type: ["inpaint", "text2img"] },
-  { value: "SD15", label: "Stable Diffusion 1.5", type: ["inpaint", "text2img"] },
+  { value: "SD21", label: "Stable Diffusion 2.1", type: ["text2img", "img2img"] },
+  { value: "SD15", label: "Stable Diffusion 1.5", type: ["text2img", "img2img"] },
 ]
 
-const loraList = [
-    { value: 'Lora1', label: 'Lora1' },
-    { value: 'Lora2', label: 'Lora2' },
-]
+const listTheme = createTheme({
+  overrides: {
+    MuiListItem: {
+      root: {
+        "&$selected": {
+          backgroundColor: "#6A0D70",
+          "&:hover": {
+            backgroundColor: "#6A0D70",
+          },
+        },
+      },
+      button: {
+        "&:hover": {
+          backgroundColor: "rgba(231, 50, 140, 0.3)",
+        },
+      },
+    },
+  },
+});
 
 
-const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
+const SettingDrawer = ({ open, generateHandler, logout,
   prompt, setPrompt,
-  negative, setNegative,
+  negativePrompt, setNegativePrompt,
   type, setType,
   model, setModel,
-  loraModel, setLoraModel,
+  loraModel, setLoraModel, loraList,
   imageCount, setImageCount,
   steps, setSteps,
   loading, setLoading,
@@ -89,9 +114,8 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
   selectedImg, setSelectedImg,
   selectedMask, setSelectedMask,
   noiseRatio, setNoiseRatio,
-  randomSeed, setRandomSeed,
-  promptWeight, setPromptWeight
-
+  randomSeed, setRandomSeed, getRandomSeed,
+  promptWeight, setPromptWeight,
 }) => {
   const theme = useTheme();
   const classes = useStyles();
@@ -102,6 +126,9 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
   const [maskSrc, setMaskSrc] = useState(null);
   const inputImgRef = useRef();
   const inputMaskRef = useRef();
+
+  // control Help
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const handleOnClickImgUpload = () => { inputImgRef.current.click(); };
   const handleOnClickMaskUpload = () => { inputMaskRef.current.click(); };
@@ -114,6 +141,9 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
     preview(event, "mask");
   };
 
+  const handleChangeSteps = (value) =>{
+    value <= 200 ? setSteps(value) : setSteps(200)
+  }
 
   const preview = (event, type) => {
     const file = event.target.files[0];
@@ -142,7 +172,7 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
         }).catch((err)=>setGenerateState(false))
   }
 
-  const handleChangeType = (event, value) => {
+  const handleChangeType = (value) => {
     if (value !== type){
       setType(value);
       handleChange("type", value)
@@ -156,15 +186,14 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
     }
   }
 
+  const handleChangeLora = (value) => {
+    setLoraModel(value)
+  }
+
 
   const Options = () => {
     return(
       <Box sx={{p:2}}>
-        {/* <Button size="large" sx={{width:"100%"}} variant="contained"
-        onClick={generateHandler}
-        >
-          Generate
-        </Button> */}
         <Box className={classes.flexColCenter} sx={{mb:1}}>
           <Button
             size="large"
@@ -183,15 +212,17 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
               },
             }}
             variant="contained"
-            startIcon={<SendIcon />}
+            // startIcon={<SendIcon />}
             onClick={generateHandler}
+            disabled={generateState}
           >
             Generate
           </Button>
         </Box>
 
         <Typography variant="h6">选择生成模型</Typography>
-        <Select value={model} onChange={(e)=>handleChangeModel(e.target.value)} fullWidth>
+        <Select value={model} onChange={(e)=>handleChangeModel(e.target.value)}
+                fullWidth color="secondary">
           {modelList.map((option) => (
             option.type.includes(type)?
             <MenuItem key={option.value} value={option.value}>
@@ -202,20 +233,30 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
 
         {/* 微調模型选择 */}
         <Typography variant="h6" mt={2}>微調模型选择</Typography>
-        <Select value={loraModel} onChange={(e) => setLoraModel(e.target.value)} fullWidth>
-          {loraList.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
+        <Select value={loraModel} onChange={(e)=>handleChangeLora(e.target.value)}
+                fullWidth color="secondary">
+            <MenuItem key={0} value={'None'}>
+              None
+            </MenuItem>
+          {loraList?.map((item,idx) => (
+            <MenuItem key={idx+1} value={item}>
+              {item}
             </MenuItem>
           ))}
         </Select>
       
         {/* 上傳图片 */}
         { type === 'text2img'? null: <Box className={classes.flexRow}>
-        <Typography variant="h6">上傳图片</Typography>
-          <IconButton edge="start" sx={{ mr: 2}} onClick={handleOnClickImgUpload}>
-            <AddIcon/>
-          </IconButton>
+        <Typography variant="h6" mt={1}>上傳图片</Typography>
+          <Box sx={{flexGrow:1}}/>
+          {imageSrc? <Box>
+            <IconButton edge="start" sx={{mr: 2}} onClick={handleOnClickImgUpload}>
+              <AddBoxIcon/>
+            </IconButton>
+            <IconButton edge="start" onClick={()=>setImageSrc(null)}>
+              <ClearIcon/>
+            </IconButton>
+          </Box> :null}
         </Box>}
         { type === 'text2img'? null: <Box
           sx={{
@@ -225,7 +266,6 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            mb: 2,
           }}
         >
           <input style={{ display: 'none' }}
@@ -233,20 +273,26 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
             type="file" accept="image/*"
             onChange={selectImgHandler} />
           {!imageSrc?
-            <IconButton edge="start" sx={{ mr: 2}} onClick={handleOnClickImgUpload}>
+            <IconButton edge="start" onClick={handleOnClickImgUpload}>
               <AddIcon fontSize="large" />
             </IconButton>:
-            <RViewerJS><img height="200px" src={imageSrc} /></RViewerJS>
-            
+            <RViewerJS><img height="200px" src={imageSrc}/></RViewerJS>
           }
         </Box>}
 
         {/* 上傳Mask */}
         { type === 'inpaint'? <Box className={classes.flexRow}>
-          <Typography variant="h6">上傳遮罩</Typography>
-          <IconButton edge="start"sx={{ mr: 2}}
-            onClick={handleOnClickMaskUpload}><AddIcon/></IconButton>
-          </Box>: null}
+          <Typography variant="h6" mt={1}>上傳遮罩</Typography>
+          <Box sx={{flexGrow:1}}/>
+          {maskSrc? <Box>
+            <IconButton edge="start" sx={{mr: 2}} onClick={handleOnClickMaskUpload}>
+              <AddBoxIcon/>
+            </IconButton>
+            <IconButton edge="start" onClick={()=>setMaskSrc(null)}>
+              <ClearIcon/>
+            </IconButton>
+          </Box> :null}
+        </Box>: null}
         { type === 'inpaint'? <Box
           sx={{
             width: "100%",
@@ -255,7 +301,6 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            mb: 2,
           }}
         >
           <input style={{ display: 'none' }}
@@ -263,34 +308,52 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
             type="file" accept="image/*"
             onChange={selectMaskHandler} />
           {!maskSrc?
-            <IconButton edge="start" sx={{ mr: 2}} onClick={handleOnClickMaskUpload}>
+            <IconButton edge="start" onClick={handleOnClickMaskUpload}>
               <AddIcon fontSize="large" />
             </IconButton>:
             <RViewerJS><img height="200px" src={maskSrc} /></RViewerJS>
           }
         </Box>:null}
 
-
-        <Typography variant="h6">渲染步数</Typography>
-        <Select value={steps} onChange={(e) => setSteps(e.target.value)}>
-          {[10, 20, 30, 40, 50].map((option) => (
-            <MenuItem key={option} value={option}>
-              {option} 步
-            </MenuItem>
-          ))}
-        </Select>
-
-        <Typography variant="h6">生成张数</Typography>
-        <Select value={imageCount} onChange={(e) => setImageCount(e.target.value)}>
-          {[1, 2, 3, 4].map((option) => (
-            <MenuItem key={option} value={option}>
-              {option} 张
-            </MenuItem>
-          ))}
-        </Select>
+        <Box className={classes.flexRow} sx={{justifyContent:'space-between', mt:2}}>
+          <Box sx={{width:'25%'}}>
+            <Typography variant="h6" >渲染步数</Typography>
+            <TextField
+              color="secondary"
+              type="number"
+              value={steps}
+              onChange={(e) => handleChangeSteps(e.target.value)}
+            />
+          </Box>
+          <Box sx={{width:'20%'}}>
+            <Typography variant="h6" >生成张数</Typography>
+            <Select color="secondary" value={imageCount} onChange={(e) => setImageCount(e.target.value)}>
+              {[1, 2, 3, 4].map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option} 张
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
+          <Box sx={{width:'45%'}}>
+            <Box className={classes.flexRow}>
+              <Typography variant="h6" >随机种子</Typography>
+              <Box sx={{flexGrow:1}}/>
+              <IconButton sx={{p:0}} onClick={()=>setRandomSeed(getRandomSeed())}>
+                <CasinoOutlinedIcon />
+              </IconButton>
+            </Box>
+            <TextField
+              type="number"
+              color="secondary"
+              value={randomSeed}
+              onChange={(e) => setRandomSeed(e.target.value)}
+            />
+          </Box>
+        </Box>
 
         {/* 噪声比例 */}
-        <Typography variant="h6" gutterBottom mt={2}>噪声比例</Typography>
+        <Typography variant="h6" gutterBottom mt={2}>重繪幅度</Typography>
         <Slider
           value={noiseRatio}
           min={0}
@@ -298,39 +361,20 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
           step={0.01}
           onChange={(e, newValue) => setNoiseRatio(newValue)}
           valueLabelDisplay="auto"
-          sx={{
-            color: '#800080', // 改成紫色
-          }}
+          sx={{color: '#800080'}}
         />
         <Typography variant="body2">当前噪声比例: {noiseRatio}</Typography>
-
-        {/* 随机种子 */}
-        <Typography variant="h6" gutterBottom mt={2}>随机种子</Typography>
-        <Slider
-          value={randomSeed}
-          min={1}
-          max={100}
-          step={1}
-          onChange={(e, newValue) => setRandomSeed(newValue)}
-          valueLabelDisplay="auto"
-          sx={{
-            color: '#800080', // 改成紫色
-          }}
-        />
-        <Typography variant="body2">当前随机种子: {randomSeed}</Typography>
 
         {/* 提示权重 */}
         <Typography variant="h6" gutterBottom mt={2}>提示权重</Typography>
         <Slider
           value={promptWeight}
-          min={0.1}
-          max={1}
-          step={0.05}
+          min={1}
+          max={30}
+          step={1}
           onChange={(e, newValue) => setPromptWeight(newValue)}
           valueLabelDisplay="auto"
-          sx={{
-            color: '#800080', // 改成紫色
-          }}
+          sx={{color: '#800080'}}
         />
         <Typography variant="body2">当前提示权重: {promptWeight}</Typography>
 
@@ -347,8 +391,8 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
         <Typography variant="h6" gutterBottom>Negative Prompt</Typography>
         <input
           type="text"
-          value={negative}
-          onChange={(e) => setNegative(e.target.value)}
+          value={negativePrompt}
+          onChange={(e) => setNegativePrompt(e.target.value)}
           style={{ width: '100%', padding: '10px', marginBottom: '15px' }}
         />
 
@@ -356,9 +400,44 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
     )
   }
 
+  const HelpDialog = () => (
+      <Dialog
+      onClose={()=>setHelpOpen(false)}
+      aria-labelledby="customized-dialog-title"
+      open={helpOpen}
+    >
+      <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
+        Help Document
+      </DialogTitle>
+      <IconButton
+        aria-label="close"
+        onClick={()=>setHelpOpen(false)}
+        sx={(theme) => ({
+          position: 'absolute',
+          right: 8,
+          top: 8,
+          color: theme.palette.grey[500],
+        })}
+      >
+        <CloseIcon />
+      </IconButton>
+      <DialogContent dividers>
+        <Typography gutterBottom>
+        a thangka of Sitting Avalokiteshvara,four-armd, best quality ,masterpiece, Exquisite painting
+        </Typography>
+        <Typography gutterBottom>
+        a thangka of knowledge wheel,gold wheel in exquisite patterned drop shape,on a dark pink utpala flower with cloud-shaped petals around bushy jagged dark green leaves,above is a part of classic Lotus Terrace,leftside is green leave,behind is blue sea with waves,Exquisite painting,MianTang style,dim colors,
+        </Typography>
+        <Typography gutterBottom>
+        Ekadasamukha head, consists of white and green and red faces, bright colors, wear golden Tiara, top is a small red Buddha head with black hair, exquisite Mandorla, MianTang style, Thousand-armed, background is clouds on gray blue sky
+        </Typography>
+      </DialogContent>
+    </Dialog>
+  )
 
-    
+
   return (
+    
     <Drawer
       variant="permanent"
       className={clsx(classes.drawer, {
@@ -372,6 +451,9 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
         }),
       }}
     >
+      
+      <ThemeProvider theme={listTheme}>
+      
       {/* Use for control load Model */}
       <Dialog
         fullScreen={fullScreen}
@@ -388,19 +470,37 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
       </Dialog>
 
       {!open ? <List>
-        {['change type', 'change model', 'generate', 'change OO'].map((text, index) => (
-          <ListItem button key={text}>
-            <ListItemIcon sx={{ pl: .5 }}>{index % 2 === 0 ? <InboxIcon /> : <MailIcon />}</ListItemIcon>
-            <ListItemText primary={text} />
-          </ListItem>
-        ))}
+        <Tooltip title={<h3>inpaint model</h3>} placement="right" arrow>
+        <ListItem button selected={type === 'inpaint'} onClick={()=>handleChangeType('inpaint')}>
+          {type === 'inpaint'?
+          <ListItemIcon sx={{ pl: .5, color:"white" }}><BrokenImageIcon /></ListItemIcon>:
+          <ListItemIcon sx={{ pl: .5 }}><BrokenImageIcon /></ListItemIcon>}
+          <ListItemText>inpaint</ListItemText>
+        </ListItem>
+        </Tooltip>
+        <Tooltip title={<h3>text2img model</h3>} placement="right" arrow>
+        <ListItem button selected={type === 'text2img'} onClick={()=>handleChangeType('text2img')}>
+        {type === 'text2img'?
+          <ListItemIcon sx={{ pl: .5, color:"white" }}><FontDownloadIcon /></ListItemIcon>:
+          <ListItemIcon sx={{ pl: .5 }}><FontDownloadIcon /></ListItemIcon>}
+          <ListItemText>text2img</ListItemText>
+        </ListItem>
+        </Tooltip>
+        <Tooltip title={<h3>img2img model</h3>} placement="right" arrow>
+        <ListItem button selected={type === 'img2img'} onClick={()=>handleChangeType('img2img')}>
+        {type === 'img2img'?
+          <ListItemIcon sx={{ pl: .5, color:"white" }}><CollectionsIcon /></ListItemIcon>:
+          <ListItemIcon sx={{ pl: .5 }}><CollectionsIcon /></ListItemIcon>}
+          <ListItemText>img2img</ListItemText>
+        </ListItem>
+        </Tooltip>
       </List> : null}
 
       {/* 更改生成模式Tab */}
       {open ? 
       <TabContext value={type}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <TabList onChange={handleChangeType} aria-label="generate type tabs">
+          <TabList onChange={(e)=>handleChangeType(e.target.value)} aria-label="generate type tabs">
             <Tab label="inpaint" value="inpaint" />
             <Tab label="text2img" value="text2img" />
             <Tab label="img2img" value="img2img" />
@@ -415,17 +515,27 @@ const SettingDrawer = ({ open, handleNewDialog, generateHandler, logout,
       <Box sx={{ flexGrow: 1 }} />
       <Divider />
       <List>
+        <Tooltip title={<h3>Logout</h3>} placement="right" arrow>
         <ListItem button onClick={logout}>
           <ListItemIcon sx={{ pl: .5 }}><ExitToAppIcon /></ListItemIcon>
           <ListItemText>Logout</ListItemText>
         </ListItem>
-        {/* <ListItem button>
-                <ListItemIcon><HelpIcon/></ListItemIcon>
-                <ListItemText>Help</ListItemText>
-            </ListItem> */}
+        </Tooltip>
+        <Tooltip title={<h3>Help</h3>} placement="right" arrow>
+        <ListItem button onClick={()=>setHelpOpen(true)}>
+          <ListItemIcon sx={{ pl: .5 }}><HelpIcon/></ListItemIcon>
+          <ListItemText>Help</ListItemText>
+        </ListItem>
+        </Tooltip>
       </List>
-      <Box sx={{ mb: 9 }} />
+      
+      {
+        open? <Box sx={{ mb: 9 }}/> : <Box sx={{ mb: 9 }} />
+      }
+      </ThemeProvider>
+      <HelpDialog/>
     </Drawer>
+    
   )
 }
 

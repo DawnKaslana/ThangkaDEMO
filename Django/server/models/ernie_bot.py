@@ -22,6 +22,47 @@ erniebot.access_token = "a71afcff2e5ee885c6117c59d563f0d8370d6a0d"
 }]
 """
 
+a=[{
+        'name': 'get_current_temperature',
+        'description': "获取指定城市的气温",
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'location': {
+                    'type': 'string',
+                    'description': "城市名称",
+                },
+                'unit': {
+                    'type': 'string',
+                    'enum': [
+                        '摄氏度',
+                        '华氏度',
+                    ],
+                },
+            },
+            'required': [
+                'location',
+                'unit',
+            ],
+        },
+        'responses': {
+            'type': 'object',
+            'properties': {
+                'temperature': {
+                    'type': 'integer',
+                    'description': "城市气温",
+                },
+                'unit': {
+                    'type': 'string',
+                    'enum': [
+                        '摄氏度',
+                        '华氏度',
+                    ],
+                },
+            },
+        },
+    }]
+
 functions = [
     {
         'name': 'text2img',
@@ -54,6 +95,27 @@ functions = [
                 'prompt',
             ],
         }
+    },
+    {
+        'name': 'changeParams',
+        'description': "修改輸入模型的參數",
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'prompt': {
+                    'type': 'string',
+                    'description': "圖像描述/文本描述/prompt",
+                },
+                'steps': {
+                    'type': 'string',
+                    'description': "生成/渲染步數",
+                },
+                'noise': {
+                    'type': 'string',
+                    'description': "噪聲強度/重繪幅度",
+                },
+            },
+        },
     },
 ]
 
@@ -99,6 +161,22 @@ def inpaint(prompt):
             "command": command,
         })
 
+def changeParams(args):
+    print(args)
+    params = {}
+
+    if 'prompt' in args: params['prompt'] = args['prompt']
+    if 'steps' in args: params['steps'] = eval(args['steps'])
+    if 'noise' in args: params['noise'] = eval(args['noise'])
+
+    return JsonResponse({
+            "role": "assistant",
+            "params": params,
+            "content": "已修改參數。",
+            "command": "changeParams",
+        })
+
+
 def chat(request):
     command = ""
     if request.method == 'POST':
@@ -118,9 +196,13 @@ def chat(request):
         })
 
         if 'thoughts' in result:
-            name2function = {'text2img': text2img, 'inpaint': inpaint}
+            name2function = {'text2img': text2img, 'inpaint': inpaint, 'changeParams': changeParams}
             func = name2function[result['name']]
-            args = json.loads(result['arguments'])
-            answer = func(prompt=args['prompt'])
+            if result['name'] == 'changeParams':
+                args = json.loads(result['arguments'])
+                answer = func(args)
+            else:
+                args = json.loads(result['arguments'])
+                answer = func(prompt=args['prompt'])
 
         return answer

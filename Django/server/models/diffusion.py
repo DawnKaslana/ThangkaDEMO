@@ -6,7 +6,7 @@ from diffusers import StableDiffusionPipeline, DDIMScheduler, \
 import torch
 import time
 import numpy as np
-from PIL import Image, ImageChops, ImageOps
+from PIL import Image, ImageChops, ImageOps, ImageFilter
 from . import images
 
 '''
@@ -25,8 +25,14 @@ model_path = "/mnt/Workspace/SDmodels/Lora/"
 filePath = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media"
 output_path = join(filePath,"output")
 
-typeSet = "text2img"
+typeSet = "text2img" #inpaint text2img img2img
 modelSet = "SD21"
+
+"""
+model list (what type can use)
+"""
+inpaintList = ["SD15", "SD21", "SDI2", "CNI"]
+SDList = ["SD15", "SD21"]
 
 def loadModel(generateType, model):
     global typeSet
@@ -38,23 +44,8 @@ def loadModel(generateType, model):
     modelSet = model
 
 def changeModel(generateType, model):
+    global pipe
     if generateType == "inpaint":
-        list = ["SD15", "SD21", "SDI2", "CNI"]
-        if model == "SD15":
-            premodel_abspath = join(sd_model_path, "SD15")  # SD21/SDI2
-            pipe = StableDiffusionInpaintPipeline.from_pretrained(
-                premodel_abspath,
-                torch_dtype=torch.float16)
-        if model == "SD21":
-            premodel_abspath = join(sd_model_path, "SD21")  # SD21/SDI2
-            pipe = StableDiffusionInpaintPipeline.from_pretrained(
-                premodel_abspath,
-                torch_dtype=torch.float16)
-        if model == "SDI2":
-            premodel_abspath = join(sd_model_path, "SDI2")  # SD21/SDI2
-            pipe = StableDiffusionInpaintPipeline.from_pretrained(
-                premodel_abspath,
-                torch_dtype=torch.float16)
         if model == "CNI":
             premodel_abspath = join(sd_model_path, "SD15")
             cnmodel_abspath = join(cn_model_path, "control_v11p_sd15_inpaint")
@@ -69,33 +60,60 @@ def changeModel(generateType, model):
                 use_safetensors=True,
             )
             pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
-    if generateType == "text2img":
-        list = ["SD15", "SD21"]
-        if model not in list: model == "SD21"
-        if model == "SD15":
-            premodel_abspath = join(sd_model_path, "SD15")
-            pipe = StableDiffusionPipeline.from_pretrained(
+        else:
+            premodel_abspath = join(sd_model_path, model)
+            pipe = StableDiffusionInpaintPipeline.from_pretrained(
                 premodel_abspath,
-                torch_dtype=torch.float16)
-        if model == "SD21":
-            premodel_abspath = join(sd_model_path, "SD21")
-            pipe = StableDiffusionPipeline.from_pretrained(
-                premodel_abspath,
+                use_safetensors=True,
                 torch_dtype=torch.float16)
 
-    # load lora
-    # pipe.load_lora_weights(join(model_path, "thangka_ACD"), weight_name="pytorch_lora_weights.safetensors")
-    # model_id = "checkpoint-25000" #if needed
+    if generateType == "text2img":
+        if model not in SDList: model == "SD21"
+        premodel_abspath = join(sd_model_path, model)
+        pipe = StableDiffusionPipeline.from_pretrained(
+            premodel_abspath,
+            use_safetensors=True,
+            torch_dtype=torch.float16)
+
+    if generateType == "img2img":
+        if model not in SDList: model == "SD21"
+        premodel_abspath = join(sd_model_path, model)
+        pipe = StableDiffusionImg2ImgPipeline.\
+            from_pretrained(
+            premodel_abspath,
+            use_safetensors=True,
+            torch_dtype=torch.float16)
+
     return pipe
 
 
-# # load pipe first time
+# load pipe first time
 pipe = changeModel(typeSet, modelSet)
 pipe.to("cuda")
 
 
 def getModelType():
-    return({'model':modelSet, 'type':typeSet})
+    result = {'model':modelSet, 'type':typeSet}
+    if modelSet == "SD21" or modelSet == "SDI2":
+        result['loraList'] = ['thangka_21_ACD',
+                              'thangka_21_ACD_250',
+                              'thangka_21_Ob_AM+HC_150',
+                              'thangka_21_Ob_BA_150',
+                              'thangka_21_Ob_Ci_150',
+                              'thangka_21_Ob_EH_150',
+                              'thangka_21_Ob_KW_150',
+                              'thangka_21_Ob_LT_150',
+                              'thangka_21_Ob_R8_150',
+                              'thangka_21_Status_140',
+                              'thangka_Ob_R8_85',
+                              'thangka_Ob_UP_150']
+    return result
+
+def loadLora(loraModelName):
+    global pipe
+    pipe.load_lora_weights(join(model_path), weight_name=loraModelName+'.safetensors')
+    # model_id = "checkpoint-25000" #if needed
+
 
 """
 process
@@ -113,61 +131,127 @@ def make_inpaint_condition(image, image_mask):
 """
 main func : inpaint text2img img2img img2text
 """
-def inpaint(fileName, maskName, text, steps, SDModel):
+def inpaint(fileName, maskName, prompt, nagative_prompt,
+            steps, seed, strength, guidance, imageCount, SDModel, loraModel):
     # param check
-    print(fileName, maskName, text, steps, SDModel)
-    if not text: text = ""
-    nagative_prompt = "bad,ugly,disfigured,blurry,watermark,normal quality,jpeg artifacts,low quality,worst quality,cropped,low res"
-    steps = int(steps) if eval(steps) else 30
+    print(fileName, maskName, prompt, steps, SDModel)
+    generator = torch.Generator(device="cpu").manual_seed(seed)
+
+    if loraModel != 'None':
+        pipe.load_lora_weights(join(model_path), weight_name=loraModel+'.safetensors')
+    else:
+        pipe.unload_lora_weights()
 
     # process image & mask  &  image_masked
     image = Image.open(join(filePath, fileName)).convert("RGBA").resize((512,512))
-    image = images.flatten(image, "#ffffff")
+    image_flat = images.flatten(image, "#ffffff")
     mask_image = Image.open(join(filePath, maskName)).resize((512,512))
-    mask_image = images.create_binary_mask(mask_image)
-    image = images.fill(image, mask_image)
+    bin_mask = images.create_binary_mask(mask_image)
+    image_fill = images.fill(image_flat, bin_mask) #通過模糊填充周圍顏色
+    np_mask = np.array(bin_mask)
+    np_mask = (np_mask > 0).astype(np.uint8) * 255
+
+    print("mask_image.mode:" + mask_image.mode)
+
+    if mask_image.mode == "RGBA":
+        use_mask = np_mask
+    else:
+        use_mask = mask_image
+
+    # image_fill.show()
 
     if SDModel == "CNI":
-        control_image = make_inpaint_condition(image, mask_image)
+        control_image = make_inpaint_condition(image_flat, bin_mask)
 
-    if SDModel == "SDI2":
-        output = pipe(prompt=text,
-            image=image,
-            mask_image=mask_image,
-            num_inference_steps=steps, #steps
-            # strength=1,#(0~1)
-            # num_images_per_prompt=1,
+    if SDModel != "CNI": #SDI2
+        output = pipe(prompt=prompt,
             nagative_prompt=nagative_prompt,
-            # guidance_scale=7.5
+            image=image_fill, #image_fill
+            mask_image=use_mask, #np_mask or not np
+            num_inference_steps=steps,
+            strength=strength,#(0~1)
+            num_images_per_prompt=imageCount,
+            guidance_scale=guidance,
+            generator=generator
             ).images[0]
     else:
-        generator = torch.Generator(device="cpu").manual_seed(1)
         output = pipe(
-            prompt=text,
+            prompt=prompt,
+            nagative_prompt=nagative_prompt,
             num_inference_steps=steps,
-            generator=generator,
+            image=image_fill,
+            mask_image=bin_mask,
             eta=1.0,
-            image=image,
-            mask_image=mask_image,
+            strength=strength,  # (0~1)
+            num_images_per_prompt=imageCount,
             control_image=control_image,
+            guidance_scale=guidance,
+            generator=generator,
         ).images[0]
 
     # output
-    newimage = Image.new('RGBA', image.size, (0, 0, 0, 0))
-    newimage.paste(image, (0, 0))
-    newimage.paste(output, (0, 0), mask_image)
-
     # output.show()
 
-    newimage.save(join(output_path,fileName[:-4]+"_output.png"))
+    newimage = Image.new('RGBA', image.size, (0, 0, 0, 0))
 
-def text2img(prompt, filename):
+    print(images.has_transparency(image))
+    if images.has_transparency(image):
+        newimage.paste(output, (0, 0))
+        image = images.MasktoTransparent(image, mask_image)
+        r, g, b, a = image.split()
+        a = a.filter(ImageFilter.MinFilter(3))
+        newimage.paste(image, (0, 0), mask=a) #ImageOps.invert(a)
+    else:
+        newimage.paste(image, (0, 0))
+        newimage.paste(output, (0, 0), mask=mask_image.convert('L'))
+
+    newimage.save(join(output_path, fileName[:-4] + "_output.png"))
+
+
+
+def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, loraModel):
     print('prompt'+str(prompt))
-    output = pipe('flower').images[0]
+    print('loraModel' + str(loraModel))
+
+    generator = torch.Generator(device="cpu").manual_seed(seed)
+
+    if loraModel != 'None':
+        pipe.load_lora_weights(join(model_path), weight_name=loraModel+'.safetensors')
+    else:
+        pipe.unload_lora_weights()
+
+    output = pipe(
+        prompt=prompt,
+        negative_prompt=negativePrompt,
+        num_inference_steps = steps,
+        strength=strength,  # (0~1)
+        num_images_per_prompt=imageCount,
+        guidance_scale=guidance,
+        generator=generator,
+    ).images[0]
     output.save(join(output_path,filename+".png"))
 
-def img2img():
-    print("")
+def img2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, loraModel):
+    generator = torch.Generator(device="cpu").manual_seed(seed)
+
+    if loraModel != 'None':
+        pipe.load_lora_weights(join(model_path), weight_name=loraModel+'.safetensors')
+    else:
+        pipe.unload_lora_weights()
+
+    init_image = Image.open(join(filePath, filename)).resize((512, 512))
+
+    output = pipe(
+        prompt=prompt,
+        negative_prompt=negativePrompt,
+        image=init_image,
+        num_inference_steps=steps,
+        strength=strength,  # (0~1)
+        num_images_per_prompt=imageCount,
+        guidance_scale=guidance,
+        generator=generator,
+    ).images[0]
+    output.save(join(output_path,filename[:-4]+"_output.png"))
 
 def img2text():
     print("")

@@ -219,12 +219,12 @@ export function User() {
             <Box sx={{ flexGrow: 1 }}/>
         </Box>
         <Box sx={{width:{xs: '90vw', sm: '80vw', md:'60vw', lg:'40vw'},
-                border:'#1783d3 3px solid',
+                border:'#6A0DA0 3px solid',
                 borderRadius:'10px'}} >
             <Box sx={{
                 display: 'flex',
                 flexDirection:'row',
-                backgroundColor:'#1783d3',
+                backgroundColor:'#6A0DA0',
                 color:'white',
                 fontFamily: 'SimHei',
                 padding:'10px',
