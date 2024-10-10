@@ -9,3 +9,4 @@
 
 ./Django/server/media/*.png
 ./Django/server/media/*.jpg
+./Django/server/output/*
