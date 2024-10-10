@@ -8,7 +8,7 @@
 **/package-lock.json
 
 
-./Django/server/media/*
-./Django/server/media/*.png
-./Django/server/media/*.jpg
-./Django/server/output/*
+/Django/server/media/*
+/Django/server/media/*.png
+/Django/server/media/*.jpg
+/Django/server/media/output
