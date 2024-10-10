@@ -211,8 +211,10 @@ export function Home() {
       setChatDialogs(list)
     }
 
+    if (args.command){
+      setMessages([...messages.slice(0, -1)])
+    }
     if (['inpaint','text2img','img2img'].includes(args.command)) {
-      console.log(['inpaint','text2img','img2img'])
       generateHandler(args)
     } else if (args.command === 'changeParams') {
       changeParams(args.params)

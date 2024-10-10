@@ -73,11 +73,13 @@ import useStyles from '../css/style';
 import { server, django, file_url } from '../api.js'
 
 const modelList = [
-  { value: "CNI", label: "ControlNet Inpaint 2", type: ["inpaint"] },
   { value: "SDI2", label: "Stable Diffusion Inpaint 2", type: ["inpaint"] },
+  { value: "CNI", label: "ControlNet Inpaint 2", type: ["inpaint"] },
   { value: "SD21", label: "Stable Diffusion 2.1", type: ["text2img", "img2img"] },
   { value: "SD15", label: "Stable Diffusion 1.5", type: ["text2img", "img2img"] },
 ]
+const inpaintList = ["SDI2", "CNI"]
+const SDList = ["SD15", "SD21"]
 
 const listTheme = createTheme({
   overrides: {
@@ -158,12 +160,12 @@ const SettingDrawer = ({ open, generateHandler, logout,
     }
   };
 
-  const handleChange = (option, changeValue) => {
-    console.log(option, changeValue)
+  const handleChange = (newType, newModel) => {
+    setModel(newModel)
     setLoading(true)
     const formData = new FormData();
-    formData.append('type', option == "type"?changeValue : type);
-    formData.append('model', option == "model"?changeValue : model);
+    formData.append('type', newType);
+    formData.append('model', newModel);
     django({ url: '/changePipe/', method: 'post', data: formData })
         .then(res => {
           if (res.data.msg === "successed") {
@@ -172,17 +174,24 @@ const SettingDrawer = ({ open, generateHandler, logout,
         }).catch((err)=>setGenerateState(false))
   }
 
-  const handleChangeType = (e, value) => {
-    if (value !== type){
-      setType(value);
-      handleChange("type", value)
+  const handleChangeType = (e, typeValue) => {
+    if (typeValue !== type){
+      setType(typeValue);
+      let newModel = model
+      if (typeValue == "inpaint" && !inpaintList.includes(model)){
+        newModel = 'SDI2'
+      } else if (typeValue != "inpaint" && inpaintList.includes(model)){
+        newModel = 'SD21'
+      }
+      
+      handleChange(typeValue, newModel)
     }
   };
 
   const handleChangeModel = (modelValue) => {
     if (modelValue !== model){
       setModel(modelValue)
-      handleChange("model", modelValue)
+      handleChange(type, modelValue)
     }
   }
 
@@ -471,7 +480,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
 
       {!open ? <List>
         <Tooltip title={<h3>inpaint model</h3>} placement="right" arrow>
-        <ListItem button selected={type === 'inpaint'} onClick={()=>handleChangeType('inpaint')}>
+        <ListItem button selected={type === 'inpaint'} onClick={(e)=>handleChangeType(e,'inpaint')}>
           {type === 'inpaint'?
           <ListItemIcon sx={{ pl: .5, color:"white" }}><BrokenImageIcon /></ListItemIcon>:
           <ListItemIcon sx={{ pl: .5 }}><BrokenImageIcon /></ListItemIcon>}
@@ -479,7 +488,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
         </ListItem>
         </Tooltip>
         <Tooltip title={<h3>text2img model</h3>} placement="right" arrow>
-        <ListItem button selected={type === 'text2img'} onClick={()=>handleChangeType('text2img')}>
+        <ListItem button selected={type === 'text2img'} onClick={(e)=>handleChangeType(e,'text2img')}>
         {type === 'text2img'?
           <ListItemIcon sx={{ pl: .5, color:"white" }}><FontDownloadIcon /></ListItemIcon>:
           <ListItemIcon sx={{ pl: .5 }}><FontDownloadIcon /></ListItemIcon>}
@@ -487,7 +496,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
         </ListItem>
         </Tooltip>
         <Tooltip title={<h3>img2img model</h3>} placement="right" arrow>
-        <ListItem button selected={type === 'img2img'} onClick={()=>handleChangeType('img2img')}>
+        <ListItem button selected={type === 'img2img'} onClick={(e)=>handleChangeType(e, 'img2img')}>
         {type === 'img2img'?
           <ListItemIcon sx={{ pl: .5, color:"white" }}><CollectionsIcon /></ListItemIcon>:
           <ListItemIcon sx={{ pl: .5 }}><CollectionsIcon /></ListItemIcon>}

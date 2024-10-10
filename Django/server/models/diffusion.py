@@ -49,6 +49,11 @@ def loadModel(generateType, model):
 
 def changeModel(generateType, model):
     global pipe
+    global typeSet
+    global modelSet
+    typeSet = generateType
+    modelSet = model
+
     if generateType == "inpaint":
         if model == "CNI":
             premodel_abspath = join(sd_model_path, "SD15")
