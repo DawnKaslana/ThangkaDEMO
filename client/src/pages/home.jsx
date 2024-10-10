@@ -211,7 +211,9 @@ export function Home() {
       let list = chatDialogs
       setChatDialogs(list)
     }
-    if (args.command === ('inpaint' || 'text2img' || 'img2img')) {
+    console.log(args)
+    if (['inpaint','text2img','img2img'].includes(args.command)) {
+      console.log(['inpaint','text2img','img2img'])
       generateHandler(args)
     } else if (args.command === 'changeParams') {
       changeParams(args.params)

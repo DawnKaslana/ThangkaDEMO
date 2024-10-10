@@ -1,4 +1,5 @@
-from os.path import join
+from os.path import join, isdir
+from os import mkdir
 from diffusers import StableDiffusionPipeline, DDIMScheduler, \
     StableDiffusionImg2ImgPipeline, \
     StableDiffusionInpaintPipeline, \
@@ -24,6 +25,9 @@ cn_model_path = "/mnt/Workspace/SDmodels/CN"
 model_path = "/mnt/Workspace/SDmodels/Lora/"
 filePath = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media"
 output_path = join(filePath,"output")
+
+if not isdir(output_path):
+    mkdir(output_path)
 
 typeSet = "text2img" #inpaint text2img img2img
 modelSet = "SD21"
