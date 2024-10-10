@@ -113,8 +113,8 @@ export function Home() {
   // generate params
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState(preNegative);
-  const [type, setType] = useState('inpaint')
-  const [model, setModel] = useState('SDI2')
+  const [type, setType] = useState(null)
+  const [model, setModel] = useState(null)
   const [loraModel, setLoraModel] = useState('None')
   const [loraList, setLoraList] = useState([])
   const [imageCount, setImageCount] = useState(1)
@@ -133,7 +133,7 @@ export function Home() {
   useEffect(() => {
     django({ url: '/getPipeType/', method: 'get'})
     .then(res => {
-      console.log(res.data)
+      console.log(res.data.type)
       setType(res.data.type) 
       setModel(res.data.model)
       setLoraList(res.data.loraList)
@@ -184,7 +184,6 @@ export function Home() {
 
         django({ url: '/chat/', method: 'post', data: formData })
         .then(res=>{
-            console.log(res.data)
             handleMessages(res.data, true)
         })
       } 
@@ -211,7 +210,7 @@ export function Home() {
       let list = chatDialogs
       setChatDialogs(list)
     }
-    console.log(args)
+
     if (['inpaint','text2img','img2img'].includes(args.command)) {
       console.log(['inpaint','text2img','img2img'])
       generateHandler(args)
@@ -221,7 +220,6 @@ export function Home() {
   }
 
   const changeParams = (params) => {
-    console.log(params)
     if (params.prompt) setPrompt(params.prompt)
     if (params.steps) setSteps(params.steps)
     if (params.noiseRatio) setNoiseRatio(params.noiseRatio)
@@ -253,7 +251,9 @@ export function Home() {
   }
 
   const inpaintGenerate = (formData) => {
-    if (formData.get('selectedImg') && formData.get('selectedMask')) {
+    if (selectedImg && selectedMask) {
+      formData.append('image',selectedImg)
+      formData.append('mask',selectedMask)
       handleNewDialog({ type: 'load', class: 'generating' })
       setInputError(false)
       setGenerateState(true)

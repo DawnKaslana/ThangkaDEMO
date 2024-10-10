@@ -118,4 +118,5 @@ def changePipe(request):
 def getType(request):
     if request.method == 'GET':
         result = diffusion.getModelType()
+        print(result)
         return JsonResponse(result)

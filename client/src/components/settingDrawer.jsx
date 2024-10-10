@@ -24,7 +24,6 @@ import Slider from '@mui/material/Slider';
 import Tab from '@material-ui/core/Tab';
 import TabContext from '@material-ui/lab/TabContext';
 import TabList from '@material-ui/lab/TabList';
-import TabPanel from '@material-ui/lab/TabPanel';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -160,6 +159,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
   };
 
   const handleChange = (option, changeValue) => {
+    console.log(option, changeValue)
     setLoading(true)
     const formData = new FormData();
     formData.append('type', option == "type"?changeValue : type);
@@ -172,7 +172,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
         }).catch((err)=>setGenerateState(false))
   }
 
-  const handleChangeType = (value) => {
+  const handleChangeType = (e, value) => {
     if (value !== type){
       setType(value);
       handleChange("type", value)
@@ -500,8 +500,8 @@ const SettingDrawer = ({ open, generateHandler, logout,
       {open ? 
       <TabContext value={type}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <TabList onChange={(e)=>handleChangeType(e.target.value)} aria-label="generate type tabs">
-            <Tab label="inpaint" value="inpaint" />
+          <TabList onChange={handleChangeType} aria-label="generate type tabs">
+            <Tab label="inpaint" value="inpaint"  />
             <Tab label="text2img" value="text2img" />
             <Tab label="img2img" value="img2img" />
           </TabList>
