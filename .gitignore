@@ -6,6 +6,7 @@
 
 **/*.log
 **/package-lock.json
+**/__pycache__
 
 
 /Django/server/media/*

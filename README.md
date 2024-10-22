@@ -23,7 +23,6 @@ sudo systemctl restart docker
 docker exec -it <container_code> /bin/sh
 npm install <package_name>
 ```
-目前要裝的是viewerjs、viewerjs-react
 
 Django
 ---------
@@ -46,6 +45,5 @@ Mysql
 帳密: root & root 
 資料庫: thangkaDEMO
 
-```
 
 
