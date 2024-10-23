@@ -58,8 +58,8 @@ export default function LabelDrawer({open, setLabelOpen}) {
                 width:`${size.width-480}px`,
                 }}>
             <TabContext value={classTab? classTab : `1`} >
-              <Box sx={{ borderBottom: 1, borderColor: 'pink',color:'black', backgroundColor:'lightpink'}}>
-                <TabList onChange={handleChange} aria-label="generate type tabs" >
+              <Box sx={{ borderBottom: 1, borderColor: 'purple',color:'black', backgroundColor:'lightpink'}}>
+                <TabList onChange={handleChange} aria-label="label class tabs" >
                 {classList?.map((item, idx)=>(
                   <Tab key={idx}
                   label={item['value']}

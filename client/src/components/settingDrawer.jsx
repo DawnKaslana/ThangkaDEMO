@@ -525,7 +525,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
 
       {/* 更改生成模式Tab */}
       {open ? 
-      <TabContext value='inpaint' >
+      <TabContext value={type? type : 'text2img'} >
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <TabList onChange={handleChangeType} aria-label="generate type tabs" >
             <Tab label="inpaint" value="inpaint"  />

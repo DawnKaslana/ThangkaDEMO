@@ -5,24 +5,6 @@ SET time_zone = '+00:00';
 SET foreign_key_checks = 0;
 SET sql_mode = 'NO_AUTO_VALUE_ON_ZERO';
 
-DROP TABLE IF EXISTS `class`;
-CREATE TABLE `class` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int NOT NULL,
-  `value` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-
-DROP TABLE IF EXISTS `label`;
-CREATE TABLE `label` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int NOT NULL,
-  `value` varchar(255) NOT NULL,
-  `class` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
 INSERT INTO `label` (`id`, `user_id`, `value`, `class`) VALUES
 (1,	0,	'light',	'1'),
 (2,	0,	'pale',	'1'),
@@ -44,12 +26,4 @@ INSERT INTO `label` (`id`, `user_id`, `value`, `class`) VALUES
 (18,	0,	'Dhyana Mudra',	'3'),
 (19,	0,	'Humkara-Mudra',	'3');
 
-DROP TABLE IF EXISTS `user`;
-CREATE TABLE `user` (
-  `user_id` int NOT NULL AUTO_INCREMENT,
-  `user_name` varchar(100) NOT NULL,
-  PRIMARY KEY (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-
--- 2024-10-22 16:05:46
+-- 2024-10-23 05:43:25

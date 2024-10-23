@@ -38,7 +38,8 @@ CREATE TABLE `user` (
 CREATE TABLE `class` (
   `id` int(255) NOT NULL,
   `user_id` int(255) NOT NULL,
-  `value` varchar(255) NOT NULL
+  `value` varchar(255) NOT NULL,
+  `negative` boolean Not NUll
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
