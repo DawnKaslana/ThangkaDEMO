@@ -19,16 +19,16 @@ app.get('/', (req, res) => {
 });
 
 
-//Connect Mysql Test
-const test = (req, res) => {
-  mysql('sample').select('*')
-  .then((result)=>{
-    res.send(result)
-  }).catch((err) => {
-    console.error(err)
-  })
-}
-app.get('/test', (req, res) => test(req, res));
+// Connect Mysql Test
+// const test = (req, res) => {
+//   mysql('sample').select('*')
+//   .then((result)=>{
+//     res.send(result)
+//   }).catch((err) => {
+//     console.error(err)
+//   })
+// }
+// app.get('/test', (req, res) => test(req, res));
 
 
 //file
@@ -43,5 +43,9 @@ app.post('/addUser', (req, res) => addUser(req, res));
 app.put('/putUser', (req, res) => putUser(req, res));
 app.delete('/deleteUser', (req, res) => deleteUser(req, res));
 
+//label
+const {getClassList, getLabelList}  = require('./models/label');
+app.get('/getClassList', (req, res) => getClassList(req, res));
+app.get('/getLabelList', (req, res) => getLabelList(req, res));
 
 

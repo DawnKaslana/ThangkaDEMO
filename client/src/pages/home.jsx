@@ -108,13 +108,13 @@ export function Home() {
   const [chatDialogs, setChatDialogs] = useState([{type:'msg', role: "assistant", content:helloText}]);
 
   // params
-  const [inputText, setInput] = useState("");
+  const [inputText, setInput] = useState('');
 
   // generate params
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState(preNegative);
-  const [type, setType] = useState(null)
-  const [model, setModel] = useState(null)
+  const [type, setType] = useState('')
+  const [model, setModel] = useState('')
   const [loraModel, setLoraModel] = useState('None')
   const [loraList, setLoraList] = useState([])
   const [imageCount, setImageCount] = useState(1)
@@ -124,8 +124,8 @@ export function Home() {
   const [promptWeight, setPromptWeight] = useState(7.5)
   
   // imgSrc pramas
-  const [selectedImg, setSelectedImg] = useState(null);
-  const [selectedMask, setSelectedMask] = useState(null);
+  const [selectedImg, setSelectedImg] = useState(undefined);
+  const [selectedMask, setSelectedMask] = useState(undefined);
   const [result, setResult] = useState('');
   const [outputSrc, setOutputSrc] = useState(null);
 
@@ -353,6 +353,7 @@ export function Home() {
   //Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [labelDrawerOpen, setLabelDrawerOpen] = useState(false);
+  const [isNegativeLabel, setIsNegativeLabel] = useState(false);
 
   const AIAvatar = () => (
     <Avatar sx={{bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1}}>TY</Avatar>
@@ -486,12 +487,13 @@ export function Home() {
         messages={messages} handleNewDialog={handleNewDialog}
         handleMessages={handleMessages} deleteDialogs={deleteDialogs}
         revokeDialogs={revokeDialogs} regenerateDialogs={regenerateDialogs}
-        drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} setLabelOpen={setLabelDrawerOpen}/>
+        drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}/>
       <SettingDrawer open={drawerOpen}
         handleNewDialog={handleNewDialog}
         generateHandler={generateHandler}
         prompt={prompt} setPrompt={setPrompt}
-        negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt}
+        setLabelOpen={setLabelDrawerOpen} setIsNegativeLabel={setIsNegativeLabel}
+        negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt} 
         type={type} setType={setType} 
         model={model} setModel={setModel}
         loraModel={loraModel} setLoraModel={setLoraModel} loraList={loraList}

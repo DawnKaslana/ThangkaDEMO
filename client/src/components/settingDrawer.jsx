@@ -61,6 +61,7 @@ import FontDownloadIcon from '@mui/icons-material/FontDownload';
 import CollectionsIcon from '@mui/icons-material/Collections';
 import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 
 // other func
 import RViewerJS from 'viewerjs-react'
@@ -103,7 +104,7 @@ const listTheme = createTheme({
 
 
 const SettingDrawer = ({ open, generateHandler, logout,
-  prompt, setPrompt,
+  prompt, setPrompt, setLabelOpen, setIsNegativeLabel,
   negativePrompt, setNegativePrompt,
   type, setType,
   model, setModel,
@@ -344,6 +345,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
               ))}
             </Select>
           </Box>
+          {/* 隨機種子 */}
           <Box sx={{width:'45%'}}>
             <Box className={classes.flexRow}>
               <Typography variant="h6" >随机种子</Typography>
@@ -387,17 +389,33 @@ const SettingDrawer = ({ open, generateHandler, logout,
         />
         <Typography variant="body2">当前提示权重: {promptWeight}</Typography>
 
-
         {/* 新增的Prompt和Negative输入框 */}
-        <Typography variant="h6" gutterBottom mt={2}>Prompt</Typography>
+        <Box className={classes.flexRow} sx={{justifyContent:"space-between"}}>
+          <Typography variant="h6" gutterBottom mt={2}>Prompt</Typography>
+          {/* 打開Prompt label標籤欄 */}
+          <Tooltip title={<h4>Prompt label</h4>} placement="top" arrow>
+          <IconButton sx={{p:0}} edge="start" color="inherit"
+          onClick={()=>{setLabelOpen(true);setIsNegativeLabel(false)}} >
+              <CollectionsBookmarkIcon />
+          </IconButton>
+          </Tooltip>
+        </Box>
         <input
           type="text"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           style={{ width: '100%', padding: '10px', marginBottom: '15px' }}
         />
-
-        <Typography variant="h6" gutterBottom>Negative Prompt</Typography>
+        <Box className={classes.flexRow} sx={{justifyContent:"space-between"}}>
+          <Typography variant="h6" gutterBottom>Negative Prompt</Typography>
+          {/* 打開Negative label標籤欄 */}
+          <Tooltip title={<h4>Negative label</h4>} placement="top" arrow>
+          <IconButton sx={{p:0}} edge="start" color="inherit"
+          onClick={()=>{setLabelOpen(true);setIsNegativeLabel(true)}} >
+              <CollectionsBookmarkIcon />
+          </IconButton>
+          </Tooltip>
+        </Box>
         <input
           type="text"
           value={negativePrompt}
@@ -507,9 +525,9 @@ const SettingDrawer = ({ open, generateHandler, logout,
 
       {/* 更改生成模式Tab */}
       {open ? 
-      <TabContext value={type}>
+      <TabContext value='inpaint' >
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <TabList onChange={handleChangeType} aria-label="generate type tabs">
+          <TabList onChange={handleChangeType} aria-label="generate type tabs" >
             <Tab label="inpaint" value="inpaint"  />
             <Tab label="text2img" value="text2img" />
             <Tab label="img2img" value="img2img" />

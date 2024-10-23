@@ -21,7 +21,7 @@ import Tooltip, { tooltipClasses } from '@mui/material/Tooltip';
 import Drawer from '@material-ui/core/Drawer';
 import Typography from '@material-ui/core/Typography';
 
-//Icon import
+// Icon import
 import SendIcon from '@mui/icons-material/Send';
 import MenuIcon from '@mui/icons-material/Menu';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
@@ -33,19 +33,19 @@ import MailIcon from '@mui/icons-material/Mail';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
-import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
+
 
 
 // CSS
 import useStyles from '../css/style';
 
-//api
+// api
 import { server, django, file_url } from '../api.js'
 
 const NavBar = ({
     inputText, setInput,
     messages, handleMessages,
-    drawerOpen, setDrawerOpen, setLabelOpen,
+    drawerOpen, setDrawerOpen,
     handleNewDialog, deleteDialogs, revokeDialogs, regenerateDialogs
 }) => {
     // CSS
@@ -112,12 +112,6 @@ const NavBar = ({
                 <Tooltip title={<h3>clear</h3>} placement="top" arrow>
                 <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}} onClick={deleteDialogs}>
                     <DeleteForeverIcon />
-                </IconButton>
-                </Tooltip>
-                {/* 打開標籤欄 */}
-                <Tooltip title={<h3>label</h3>} placement="top" arrow>
-                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}} onClick={()=>setLabelOpen(true)}>
-                    <CollectionsBookmarkIcon />
                 </IconButton>
                 </Tooltip>
 
