@@ -1,98 +1,160 @@
-// Basic
 import * as React from 'react';
-import { useState, useEffect, useRef } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import { useState, useEffect } from 'react';
 import { useWindowSize } from "@uidotdev/usehooks";
-
-// MUI Component
 import Drawer from '@material-ui/core/Drawer';
-import Button from '@material-ui/core/Button';
 import Box from '@mui/material/Box';
-import List from '@material-ui/core/List';
-import Divider from '@material-ui/core/Divider';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
-import Typography from '@mui/material/Typography';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import TabContext from '@material-ui/lab/TabContext';
-import TabList from '@material-ui/lab/TabList';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
+import Typography from '@mui/material/Typography';
+import { styled } from '@mui/material/styles';
+import { makeStyles } from '@material-ui/core/styles';
+import Grid from '@material-ui/core/Grid';
+import Paper from '@material-ui/core/Paper';
 
 //api
-import { server } from '../api.js'
+import { server, django, file_url } from '../api.js';
 
-export default function LabelDrawer({open, setLabelOpen}) {
+// 自定义样式
+const useStyles = makeStyles((theme)=> ({
+  drawer: {
+    backgroundColor: '#2e1534', //'#212121'
+  },
+  tableRoot: {
+    flexGrow: 1,
+    padding:'1em',
+  },
+  paper: {
+    padding: theme.spacing(2),
+    textAlign: 'center',
+    color: '#4F4F4F',
+    cursor: 'pointer',
+    fontWeight:'500',
+    '&:hover': {
+      color:'black',
+      backgroundColor: '#D3A4FF',
+    },
+  },
+}));
+
+const StyledTabs = styled((props) => (
+  <Tabs
+    {...props}
+    TabIndicatorProps={{ children: <span className="MuiTabs-indicatorSpan" /> }}
+  />
+))({
+  '& .MuiTabs-indicator': {
+    display: 'flex',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  '& .MuiTabs-indicatorSpan': {
+    // maxWidth: 100,
+    width: '70%',
+    backgroundColor: '#635ee7',
+  },
+});
+
+const StyledTab = styled((props) => <Tab disableRipple {...props} />)(
+  ({ theme }) => ({
+    textTransform: 'none',
+    fontWeight: theme.typography.fontWeightRegular,
+    fontSize: theme.typography.pxToRem(15),
+    marginRight: theme.spacing(1),
+    color: 'rgba(255, 255, 255, 0.7)',
+    '&.Mui-selected': {
+      color: '#fff',
+    },
+    '&.Mui-focusVisible': {
+      backgroundColor: 'rgba(100, 95, 228, 0.32)',
+    },
+  }),
+);
+
+
+export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel, 
+  prompt, setPrompt, negativePrompt, setNegativePrompt }) {
   const size = useWindowSize();
-  const [classTab, setClassTab] = useState('1');
+  const styles = useStyles();
+  const [classTab, setClassTab] = useState(); // 使用字符串作为初始值
   const [labelList, setLabelList] = useState([]);
-  const [classList, setClassList] = useState(['1111']);
+  const [classList, setClassList] = useState([]);
 
   useEffect(() => {
-    server({url:'/getClassList'}).then((res) => {
-      setClassList(res.data)
-    })
-    server({url:'/getLabelList'}).then((res) => {
-      console.log(res.data)
-      setLabelList(res.data)
-    })
-  }, [])
+    server({ url: '/getClassList', params:{isNegativeLabel} }).then((res) => {
+      setClassList(res.data);
+      setClassTab(res.data[0].id)
+    }).catch(error => console.error('Error fetching class list:', error));
+    
+    server({ url: '/getLabelList' }).then((res) => {
+      setLabelList(res.data);
+    }).catch(error => console.error('Error fetching label list:', error));
+  }, [open]);
 
   const handleChange = (event, newValue) => {
-    setClassTab(newValue.toString());
+    setClassTab(newValue); // 将 newValue 转换为字符串
+  };
+
+  // 点击label事件，更新prompt，檢查是否已存在
+  const handleCellClick = (label) => {
+    let promptStr = isNegativeLabel? negativePrompt : prompt
+    let setPromptStr = isNegativeLabel? setNegativePrompt : setPrompt
+
+    let promptList = promptStr? promptStr.split(',') : []
+    let labelIdx = promptList.indexOf(label)
+    if (promptList.indexOf(label) < 0) promptList.push(label)
+    else promptList.splice(labelIdx, 1)
+    setPromptStr(promptList.join(','))
   };
 
 
-  return (
-        <React.Fragment>
-          <Drawer anchor={'right'} open={open} onClose={()=>setLabelOpen(false)}>
-            <Box width="74vw" height="100vh"
-              sx={{ 
-                backgroundColor:'#212121',
-                width:`${size.width-480}px`,
-                }}>
-            <TabContext value={classTab? classTab : `1`} >
-              <Box sx={{ borderBottom: 1, borderColor: 'purple',color:'black', backgroundColor:'lightpink'}}>
-                <TabList onChange={handleChange} aria-label="label class tabs" >
-                {classList?.map((item, idx)=>(
-                  <Tab key={idx}
-                  label={item['value']}
-                  value={item['id']? item['id'].toString() : 0}
-                  sx={{ fontWeight:'bold' }}/>
-                  )
-                )}
-                </TabList>
-              </Box>
-            </TabContext>
-            
-            <TableContainer >
-              <Table sx={{ color:'white' }} aria-label="label table">
-                <TableBody sx={{ color:'white' }}>
-                  {labelList?.map((row, idx) => {
-                    return (
-                    <TableRow key={idx}>
-                      {
-                        row.map((item, idx)=>(
-                          classTab === item['class'] ?
-                          <TableCell key={item['id']} align="center" sx={{ color:'white' }}>{item['value']}
-                          </TableCell> : null
-                        ))
-                      }
-                    </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
+  const filteredClasses = classList.filter(cls => cls['negative'] === isNegativeLabel);
+  const filteredLabels = labelList.filter(label => label['class'] === classTab); // 确保 classTab 和 label['class'] 比较时为字符串
 
-            </Box>
-          </Drawer>
-        </React.Fragment>
+  return (
+    <React.Fragment>
+      <Drawer anchor={'right'} open={open} onClose={() => setLabelOpen(false)}>
+        <Box
+          height="100vh"
+          className={styles.drawer}
+          sx={{ width: `${size.width - 480}px` }}
+        >
+          <StyledTabs
+            value={classTab}
+            onChange={handleChange}
+            aria-label="label class tabs"
+            TabIndicatorProps={{
+              style: {
+                color: "#6A0DA0",
+                backgroundColor: "#6A0DA0"
+              }
+            }}
+          >
+            {filteredClasses?.map((item, idx) => (
+              <StyledTab
+                key={idx}
+                label={item.value}
+                value={item.id} // 确保 value 为字符串
+                className={styles.tab}
+              />
+            ))}
+          </StyledTabs>
+          <Box className={styles.tableRoot}>
+          <Grid container spacing={3}>
+            {/* xs sm md lg xl xxl */}
+            {filteredLabels.length > 0 ? (
+              filteredLabels?.map((label, idx) => (
+                <Grid item xs={12} sm={6} md={3} lg={2} xl={1} xxl={1} key={idx}>
+                  <Paper className={styles.paper} onClick={()=>handleCellClick(label.value)} >
+                    {label.value}
+                  </Paper>
+                </Grid>
+              ))
+            ) : 'No data available' }
+
+          </Grid>
+          </Box>
+        </Box>
+      </Drawer>
+    </React.Fragment>
   );
 }

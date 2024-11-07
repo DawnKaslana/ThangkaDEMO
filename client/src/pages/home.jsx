@@ -353,7 +353,7 @@ export function Home() {
   //Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [labelDrawerOpen, setLabelDrawerOpen] = useState(false);
-  const [isNegativeLabel, setIsNegativeLabel] = useState(false);
+  const [isNegativeLabel, setIsNegativeLabel] = useState(0);
 
   const AIAvatar = () => (
     <Avatar sx={{bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1}}>TY</Avatar>
@@ -508,7 +508,9 @@ export function Home() {
         selectedMask={selectedMask} setSelectedMask={setSelectedMask}
         logout={logout}
       />
-      <LabelDrawer open={labelDrawerOpen} setLabelOpen={setLabelDrawerOpen}/>
+      <LabelDrawer open={labelDrawerOpen} setLabelOpen={setLabelDrawerOpen} 
+        isNegativeLabel={isNegativeLabel} prompt={prompt} setPrompt={setPrompt}
+        negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt}/>
       <Container disableGutters maxWidth={false} sx={{ m: 0, pb: 10, overflow: 'auto', height: '100vh' }} >
       <Snackbar 
         open={inputError}

@@ -389,19 +389,20 @@ const SettingDrawer = ({ open, generateHandler, logout,
         />
         <Typography variant="body2">当前提示权重: {promptWeight}</Typography>
 
-        {/* 新增的Prompt和Negative输入框 */}
+        {/* Prompt和NegativePrompt输入框 */}
         <Box className={classes.flexRow} sx={{justifyContent:"space-between"}}>
           <Typography variant="h6" gutterBottom mt={2}>Prompt</Typography>
           {/* 打開Prompt label標籤欄 */}
           <Tooltip title={<h4>Prompt label</h4>} placement="top" arrow>
           <IconButton sx={{p:0}} edge="start" color="inherit"
-          onClick={()=>{setLabelOpen(true);setIsNegativeLabel(false)}} >
+          onClick={()=>{setLabelOpen(true);setIsNegativeLabel(0)}} >
               <CollectionsBookmarkIcon />
           </IconButton>
           </Tooltip>
         </Box>
-        <input
+        <textarea
           type="text"
+          rows="3"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           style={{ width: '100%', padding: '10px', marginBottom: '15px' }}
@@ -411,13 +412,14 @@ const SettingDrawer = ({ open, generateHandler, logout,
           {/* 打開Negative label標籤欄 */}
           <Tooltip title={<h4>Negative label</h4>} placement="top" arrow>
           <IconButton sx={{p:0}} edge="start" color="inherit"
-          onClick={()=>{setLabelOpen(true);setIsNegativeLabel(true)}} >
+          onClick={()=>{setLabelOpen(true);setIsNegativeLabel(1)}} >
               <CollectionsBookmarkIcon />
           </IconButton>
           </Tooltip>
         </Box>
-        <input
+        <textarea
           type="text"
+          rows="3"
           value={negativePrompt}
           onChange={(e) => setNegativePrompt(e.target.value)}
           style={{ width: '100%', padding: '10px', marginBottom: '15px' }}

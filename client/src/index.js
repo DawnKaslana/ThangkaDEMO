@@ -15,7 +15,6 @@ root.render(
     <BrowserRouter>
         <Routes>
             <Route path="/" element={<Home />} onEnter={document.title='thangka inpaint DEMO'}/>
-            <Route path="/temp" element={<Temp />} onEnter={document.title='thangka inpaint DEMO'}/>
             <Route path="/login" element={<User />}  onEnter={document.title='thangka inpaint DEMO'}/>
         </Routes>
     </BrowserRouter>

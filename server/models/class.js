@@ -13,9 +13,9 @@ const isExist = (value) => {
     })
   }
 
-
-const getLabelList = (req, res) => {
-    mysql('label').select('*')
+const getClassList = (req, res) => {
+  let negative = req.query.isNegativeLabel
+    mysql('class').where({negative}).select('*')
     .then((result)=>{
       res.send(result)
     }).catch((err) => {
@@ -23,6 +23,7 @@ const getLabelList = (req, res) => {
     })
 }
 
+
 module.exports = {
-    getLabelList,
+    getClassList,
 }
