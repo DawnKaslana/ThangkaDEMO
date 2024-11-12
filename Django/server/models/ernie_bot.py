@@ -22,7 +22,7 @@ erniebot.access_token = "a71afcff2e5ee885c6117c59d563f0d8370d6a0d"
 }]
 """
 
-a=[{
+template=[{
         'name': 'get_current_temperature',
         'description': "获取指定城市的气温",
         'parameters': {
@@ -72,7 +72,7 @@ functions = [
             'properties': {
                 'prompt': {
                     'type': 'string',
-                    'description': "圖像描述",
+                    'description': "翻譯成英文的圖像描述",
                 },
             },
             'required': [
@@ -117,6 +117,40 @@ functions = [
             },
         },
     },
+    {
+        'name': 'optimizePrompt',
+        'description': "優化、修改、加強輸入的文生圖文本提示，讓生成效果更好",
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'prompt': {
+                    'type': 'string',
+                    'description': "圖像描述/文本描述/prompt",
+                },
+            },
+        },
+    },
+    {
+        'name': 'changeParamsAndGenerate',
+        'description': "修改輸入模型的參數並執行圖像生成",
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'prompt': {
+                    'type': 'string',
+                    'description': "圖像描述/文本描述/prompt",
+                },
+                'steps': {
+                    'type': 'string',
+                    'description': "生成/渲染步數",
+                },
+                'noise': {
+                    'type': 'string',
+                    'description': "噪聲強度/重繪幅度",
+                },
+            },
+        },
+    },
 ]
 
 def generateImgByErnie(prompt):
@@ -131,6 +165,50 @@ def generateImgByErnie(prompt):
     )
     print('generateImgByErnie')
 
+def translateByErnie(text, lang='eng'):
+
+    messages = [{
+        "role": "user",
+        "content": "將'" + text + "'翻譯成" + lang + "，只輸出" + lang
+    }]
+
+    response = erniebot.ChatCompletion.create(
+        model="ernie-3.5",
+        messages=messages,
+        functions=functions
+    )
+
+    return response.get_result()
+
+
+def optimizePrompt(prompt):
+    messages = [{
+        "role": "user",
+        "content": "優化、修改、加強輸入的文生圖文本提示'"+prompt+"'，讓生成效果更好"
+    }]
+
+    response = erniebot.ChatCompletion.create(
+        model="ernie-3.5",
+        messages=messages,
+        functions=functions
+    )
+
+    result = response.get_result()
+    print(result)
+    return JsonResponse({
+        "role": "assistant",
+        "prompt": result,
+        "content": "已將prompt優化為："+result,
+    })
+
+includeChinese = lambda x:sum([1 if u'\u4e00' <= i <= u'\u9fff' else 0 for i in x])>0
+def translate(request):
+    if request.method == 'POST':
+        text = request.POST.get("text")
+        lang = request.POST.get("lang")
+
+        return JsonResponse({"text": translateByErnie(text, lang)})
+
 def text2img(prompt):
     info = diffusion.getModelType()
     content = ""
@@ -139,6 +217,10 @@ def text2img(prompt):
         content = "請先切換為文生圖模式。"
     else:
         command = "text2img"
+
+    if includeChinese(prompt):
+        prompt = translateByErnie(prompt)
+
     return JsonResponse({
             "role": "assistant",
             "prompt": prompt,
@@ -154,9 +236,10 @@ def inpaint(prompt):
         content = "請先切換為修復模式。"
     else:
         command = "inpaint"
+
     return JsonResponse({
             "role": "assistant",
-            "prompt": prompt,
+            "prompt": translateByErnie(prompt),
             "content": content,
             "command": command,
         })
@@ -177,8 +260,8 @@ def changeParams(args):
         })
 
 
+
 def chat(request):
-    command = ""
     if request.method == 'POST':
         messages = request.POST.get("messages")
         messages = json.loads(messages)
@@ -196,7 +279,10 @@ def chat(request):
         })
 
         if 'thoughts' in result:
-            name2function = {'text2img': text2img, 'inpaint': inpaint, 'changeParams': changeParams}
+            name2function = {'text2img': text2img,
+                             'inpaint': inpaint,
+                             'changeParams': changeParams,
+                             'optimizePrompt': optimizePrompt}
             func = name2function[result['name']]
             if result['name'] == 'changeParams':
                 args = json.loads(result['arguments'])

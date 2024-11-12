@@ -8,6 +8,7 @@ import { makeStyles, useTheme, createTheme, ThemeProvider } from '@material-ui/c
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
+import Checkbox from '@mui/material/Checkbox';
 import List from '@material-ui/core/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -16,6 +17,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import Divider from '@material-ui/core/Divider';
 import Drawer from '@material-ui/core/Drawer';
 import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Typography from '@mui/material/Typography';
@@ -35,6 +37,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
+
 
 //Icon import
 import InboxIcon from '@mui/icons-material/MoveToInbox';
@@ -62,6 +65,8 @@ import CollectionsIcon from '@mui/icons-material/Collections';
 import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
+import TranslateIcon from '@mui/icons-material/Translate';
+import GTranslateIcon from '@mui/icons-material/GTranslate';
 
 // other func
 import RViewerJS from 'viewerjs-react'
@@ -81,6 +86,8 @@ const modelList = [
 ]
 const inpaintList = ["SDI2", "CNI"]
 const SDList = ["SD15", "SD21"]
+
+const languages = [{title:'中文',value:'chs'},{title:'English',value:'eng'}]
 
 const listTheme = createTheme({
   overrides: {
@@ -199,7 +206,6 @@ const SettingDrawer = ({ open, generateHandler, logout,
   const handleChangeLora = (value) => {
     setLoraModel(value)
   }
-
 
   const Options = () => {
     return(
@@ -332,6 +338,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
               color="secondary"
               type="number"
               value={steps}
+              InputProps={{ inputProps: { min: 1, max:200} }}
               onChange={(e) => handleChangeSteps(e.target.value)}
             />
           </Box>
@@ -358,6 +365,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
               type="number"
               color="secondary"
               value={randomSeed}
+              InputProps={{ inputProps: { min: -1} }}
               onChange={(e) => setRandomSeed(e.target.value)}
             />
           </Box>
@@ -387,11 +395,17 @@ const SettingDrawer = ({ open, generateHandler, logout,
           valueLabelDisplay="auto"
           sx={{color: '#800080'}}
         />
-        <Typography variant="body2">当前提示权重: {promptWeight}</Typography>
+        <Typography variant="body2" mb={2}>当前提示权重: {promptWeight}</Typography>
 
         {/* Prompt和NegativePrompt输入框 */}
         <Box className={classes.flexRow} sx={{justifyContent:"space-between"}}>
-          <Typography variant="h6" gutterBottom mt={2}>Prompt</Typography>
+          <Typography variant="h6" gutterBottom >Prompt</Typography>
+          {/* 翻譯按鈕 */}
+          <IconButton sx={{p:0,ml:1}} edge="start" color="inherit"
+            onClick={(e)=>handleTranslateClick(e, 0)}>
+            <GTranslateIcon />
+          </IconButton>
+          <Box sx={{flexGrow:1}}/>
           {/* 打開Prompt label標籤欄 */}
           <Tooltip title={<h4>Prompt label</h4>} placement="top" arrow>
           <IconButton sx={{p:0}} edge="start" color="inherit"
@@ -407,8 +421,14 @@ const SettingDrawer = ({ open, generateHandler, logout,
           onChange={(e) => setPrompt(e.target.value)}
           style={{ width: '100%', padding: '10px', marginBottom: '15px' }}
         />
-        <Box className={classes.flexRow} sx={{justifyContent:"space-between"}}>
+        <Box className={classes.flexRow}>
           <Typography variant="h6" gutterBottom>Negative Prompt</Typography>
+          {/* 翻譯按鈕 */}
+          <IconButton sx={{p:0,ml:1}} edge="start" color="inherit"
+            onClick={(e)=>handleTranslateClick(e, 1)}>
+            <GTranslateIcon />
+          </IconButton>
+          <Box sx={{flexGrow:1}}/>
           {/* 打開Negative label標籤欄 */}
           <Tooltip title={<h4>Negative label</h4>} placement="top" arrow>
           <IconButton sx={{p:0}} edge="start" color="inherit"
@@ -430,10 +450,10 @@ const SettingDrawer = ({ open, generateHandler, logout,
   }
 
   const HelpDialog = () => (
-      <Dialog
-      onClose={()=>setHelpOpen(false)}
-      aria-labelledby="customized-dialog-title"
-      open={helpOpen}
+    <Dialog
+    onClose={()=>setHelpOpen(false)}
+    aria-labelledby="customized-dialog-title"
+    open={helpOpen}
     >
       <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
         Help Document
@@ -465,6 +485,31 @@ const SettingDrawer = ({ open, generateHandler, logout,
   )
 
 
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [languageNMenu, setLanguageNMenu] = useState(0);
+  const languageMenuOpen = Boolean(anchorEl);
+  const handleTranslateClick = (event,negative) => {
+    console.log(negative)
+    setAnchorEl(event.currentTarget);
+    setLanguageNMenu(negative)
+  };
+  const handleTranslateClose = () => setAnchorEl(null);
+
+  const translate = (lang) => {
+    let text = languageNMenu? negativePrompt: prompt
+    if (text) {
+      const formData = new FormData();
+      formData.append('text', text);
+      formData.append('lang', lang);
+      django({ url: '/translate/', method: 'post', data: formData })
+      .then(res=>{
+        languageNMenu? setNegativePrompt(res.data.text): setPrompt(res.data.text)
+      })
+    }
+    handleTranslateClose()
+  }
+
+
   return (
     
     <Drawer
@@ -483,13 +528,13 @@ const SettingDrawer = ({ open, generateHandler, logout,
       
       <ThemeProvider theme={listTheme}>
       
-      {/* Use for control load Model */}
+      {/* control loading model */}
       <Dialog
         fullScreen={fullScreen}
         fullWidth
         open={loading}
         maxWidth={'sm'}
-      >
+        >
         <DialogTitle>
           {"Loading Model......"}
         </DialogTitle>
@@ -540,6 +585,26 @@ const SettingDrawer = ({ open, generateHandler, logout,
       {
         open? Options() : null
       }
+
+      <Menu
+        id="LanguageMenu"
+        anchorEl={anchorEl}
+        open={languageMenuOpen}
+        onClose={handleTranslateClose}
+        slotProps={{
+          paper: {
+            style: {
+              width: '20ch',
+            },
+          },
+        }}
+      >
+        {languages.map((option,idx) => (
+          <MenuItem key={idx} onClick={()=>translate(option.value)}>
+            {option.title}
+          </MenuItem>
+        ))}
+      </Menu>
 
       <Box sx={{ flexGrow: 1 }} />
       <Divider />

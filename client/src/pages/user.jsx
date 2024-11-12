@@ -27,8 +27,9 @@ import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import SaveAltIcon from '@mui/icons-material/SaveAlt';
-import AddToPhotosIcon from '@mui/icons-material/AddToPhotos';
+
+// CSS
+import useStyles from '../css/style';
 
 //api
 import { server } from '../api.js'
@@ -95,6 +96,8 @@ export function User() {
     const [searchInput, setSearchInput] = useState('');
     const [error, setError] = useState(false);
     const [helperText, setHelperText] = useState('');
+
+    const styles = useStyles();
     
     useEffect(() => {
         server({url:'/getUserList'}).then((res) => {
@@ -155,8 +158,8 @@ export function User() {
     }
 
     const putUser = () => {
-        if (input) {
-            server({url:'/putUser', method:'put',data:{'user_id':selectUser, 'user_name': input}})
+        if (input && input!==selectUser.user_name) {
+            server({url:'/putUser', method:'put',data:{'user_id':selectUser.user_id, 'user_name': input}})
                 .then((res) => {
                 if(res.data === 'existed'){
                     setError(true)
@@ -167,16 +170,20 @@ export function User() {
                 }
             })
         } else {
+            handleClose()
+        }
+        if (!input) {
             setError(true)
             setHelperText('请输入用户名')
         }
     }
 
     const deleteUser = () => {
-        server({url:'/deleteUser', method:'delete',data:{'user_id':selectUser}})
+        server({url:'/deleteUser', method:'delete',data:{'user_id':selectUser.user_id}})
         .then((res) => {
             setConfirmOpen(false)
             setRender(!render)
+            setInput('')
         }) 
     }
 
@@ -190,14 +197,6 @@ export function User() {
             { path: '/',secure: false,sameSite :false}
         );
         navigate('/');
-    }
-
-    const updateImages = () => {
-        server({url:'/updateFileList'})
-        .then((res) => {
-            if (res.data === 'updated') alert('更新完毕')
-            else alert('更新失敗')
-        })
     }
 
     return(
@@ -270,14 +269,14 @@ export function User() {
                     <ListItemSecondaryAction>
                         <IconButton aria-label="comments" onClick={()=>{
                             setOpen(true)
-                            setSelectUser(item.user_id)
+                            setSelectUser(item)
                             setInput(item.user_name)
                             setOpenType('edit')
                         }}>
                             <EditIcon />
                         </IconButton>
                         <IconButton aria-label="delete" onClick={()=>{
-                            setSelectUser(item.user_id)
+                            setSelectUser(item)
                             setInput(item.user_name)
                             setConfirmOpen(true)}
                             }>
@@ -295,12 +294,16 @@ export function User() {
                 <TextField
                     autoFocus
                     margin="dense"
+                    color="secondary"
                     id="name"
                     label="Username"
                     fullWidth
                     variant="outlined"
                     error={error}
                     helperText={helperText}
+                    FormHelperTextProps={{
+                        className: styles.helperText
+                    }}
                     value={input}
                     onChange={(e)=>{
                         setInput(e.target.value)
@@ -310,14 +313,14 @@ export function User() {
                 />
             </DialogContent>
             <DialogActions sx={{display:'flex',justifyContent:'space-between'}}>
-            <Button sx={{ml:'15px'}} variant="contained" onClick={handleClose}>Cancel</Button>
+            <Button sx={{ml:'15px'}} className={styles.cancelButton} variant="outlined" onClick={handleClose}>Cancel</Button>
             <Button sx={{mr:'15px'}} variant="contained" color="secondary" onClick={openType === 'add'?addUser:putUser}>Submit</Button>
             </DialogActions>
         </Dialog>
         <Dialog open={confirmOpen} onClose={handleConfirmClose}>
-            <DialogTitle>确认删除用户{input}</DialogTitle>
+            <DialogTitle>确认删除用户{input}?</DialogTitle>
             <DialogActions sx={{display:'flex',justifyContent:'space-between'}}>
-            <Button sx={{ml:'15px'}} variant="contained" onClick={handleConfirmClose}>Cancel</Button>
+            <Button sx={{ml:'15px'}} className={styles.cancelButton} variant="outlined" onClick={handleConfirmClose}>Cancel</Button>
             <Button sx={{mr:'15px'}} variant="contained" color="secondary" onClick={deleteUser}>Delete</Button>
             </DialogActions>
         </Dialog>

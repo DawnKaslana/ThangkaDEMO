@@ -1,7 +1,5 @@
 import { makeStyles, useTheme } from '@material-ui/core/styles';
 
-
-
 const drawerWidth = 480;
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -76,6 +74,45 @@ const useStyles = makeStyles((theme) => ({
         marginTop: '1em',
       } 
     },
+    cancelButton: {
+      backgroundColor: '#f7f7f8 !important',
+      color: '#800080 !important', //800080
+      border: '1px solid #800080 !important',
+      '&:hover': {
+        backgroundColor: '#fff !important',
+      },
+    },
+    labelDrawer: {
+      backgroundColor: '#2e1534', //'#212121'
+    },
+    tableRoot: {
+      flexGrow: 1,
+      padding:'1em',
+    },
+    paper: {
+      display:'flex',
+      justifyContent:'end',
+      padding: theme.spacing(1.8),
+      textAlign: 'center',
+      color: '#4F4F4F',
+      cursor: 'pointer',
+      fontSize: '1.2em',
+      // lineHeight:'1em',
+      fontWeight:'500',
+      '&:hover': {
+        color:'black',
+        backgroundColor: '#e0c1ff',
+      },
+    },
+    helperText:{
+      margin: '0 !important',
+    },
+    tabIconButton:{
+      color:'rgba(255, 255, 255, 0.7) !important',
+      '&:hover': {
+        color:'white !important',
+      },
+    }
   }));
   
   export default useStyles

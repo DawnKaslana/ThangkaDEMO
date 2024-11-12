@@ -76,7 +76,7 @@ import ReactMarkdown from 'react-markdown'
 const cookies = new Cookies();
 
 const helloText = "Hello!這裡是TY的Thangka Inpaint DEMO."
-const preNegative = "bad,ugly,disfigured,blurry,watermark,normal quality,jpeg artifacts,low quality,worst quality,cropped,low res"
+const preNegativePrompt = "bad,ugly,disfigured,blurry,watermark,normal quality,jpeg artifacts,low quality,worst quality,cropped,low res"
 
 
 const getRandomSeed = () => {
@@ -112,7 +112,7 @@ export function Home() {
 
   // generate params
   const [prompt, setPrompt] = useState('')
-  const [negativePrompt, setNegativePrompt] = useState(preNegative);
+  const [negativePrompt, setNegativePrompt] = useState(preNegativePrompt);
   const [type, setType] = useState('')
   const [model, setModel] = useState('')
   const [loraModel, setLoraModel] = useState('None')
@@ -510,7 +510,8 @@ export function Home() {
       />
       <LabelDrawer open={labelDrawerOpen} setLabelOpen={setLabelDrawerOpen} 
         isNegativeLabel={isNegativeLabel} prompt={prompt} setPrompt={setPrompt}
-        negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt}/>
+        negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt}
+        userId={userId}/>
       <Container disableGutters maxWidth={false} sx={{ m: 0, pb: 10, overflow: 'auto', height: '100vh' }} >
       <Snackbar 
         open={inputError}
