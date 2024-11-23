@@ -28,7 +28,6 @@ const useStyles = makeStyles((theme) => ({
       zIndex: 0,
       width: drawerWidth,
       flexShrink: 0,
-      whiteSpace: 'nowrap',
     },
     drawerOpen: {
       width: drawerWidth,
@@ -61,11 +60,22 @@ const useStyles = makeStyles((theme) => ({
       flexGrow: 1,
       padding: theme.spacing(3),
     },
-    flexColCenter: {
-      display:"flex",flexDirection:"column", justifyContent:"center", alignItems: 'center'
+    flexCol: {
+      display:"flex",flexDirection:"column", alignItems: 'center'
+    },
+    flexCenter:{
+      justifyContent:'center', alignItems: 'center'
     },
     flexRow: {
       display:"flex",flexDirection:"row", alignItems: 'center', 
+    },
+    imgBox: {
+      width: "100%",
+      height: "200px",
+      border: "1px dashed gray",
+      display: "flex",
+      justifyContent:'center',
+      alignItems: 'center'
     },
     reactMarkDown: {
       '& p':{

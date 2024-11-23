@@ -4,7 +4,6 @@ import { pink, cyan, purple } from '@mui/material/colors';
 export const theme = createTheme({
     palette: {
         primary: pink,
-        secondary: cyan,
     },
 });
 

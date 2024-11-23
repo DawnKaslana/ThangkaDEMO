@@ -1,5 +1,5 @@
-from os.path import join, isdir
-from os import mkdir
+from os.path import join, isdir, isfile
+from os import mkdir, listdir
 from diffusers import StableDiffusionPipeline, DDIMScheduler, \
     StableDiffusionImg2ImgPipeline, \
     StableDiffusionInpaintPipeline, \
@@ -22,15 +22,15 @@ presetting
 """
 sd_model_path = "/mnt/Workspace/SDmodels/"
 cn_model_path = "/mnt/Workspace/SDmodels/CN"
-model_path = "/mnt/Workspace/SDmodels/Lora/"
+lora_model_path = "/mnt/Workspace/SDmodels/Lora/"
 filePath = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media"
 output_path = join(filePath,"output")
 
 if not isdir(output_path):
     mkdir(output_path)
 
-typeSet = "text2img" #inpaint text2img img2img
-modelSet = "SD21"
+typeSet = "inpaint" #inpaint text2img img2img
+modelSet = "SDI2" #SDI2 SD21
 
 """
 model list (what type can use)
@@ -102,25 +102,26 @@ pipe.to("cuda")
 
 
 def getModelType():
-    result = {'model':modelSet, 'type':typeSet}
+    result = {'model':modelSet, 'type':typeSet, 'loraList':[], 'cnList':[]}
+    # 模型列表改成翻文件夾
     if modelSet == "SD21" or modelSet == "SDI2":
-        result['loraList'] = ['thangka_21_ACD',
-                              'thangka_21_ACD_250',
-                              'thangka_21_Ob_AM+HC_150',
-                              'thangka_21_Ob_BA_150',
-                              'thangka_21_Ob_Ci_150',
-                              'thangka_21_Ob_EH_150',
-                              'thangka_21_Ob_KW_150',
-                              'thangka_21_Ob_LT_150',
-                              'thangka_21_Ob_R8_150',
-                              'thangka_21_Status_140',
-                              'thangka_Ob_R8_85',
-                              'thangka_Ob_UP_150']
+        loraList = listdir(lora_model_path)
+        for item in loraList:
+            if isfile(join(lora_model_path, item)):
+                if item.split('.')[1] == 'safetensors':
+                    result['loraList'].append(item.split('.')[0])
+
+    cnList = listdir(cn_model_path)
+    for item in cnList:
+        if isfile(join(cn_model_path, item)):
+            if item.split('.')[1] == 'safetensors':
+                result['cnList'].append(item.split('.')[0])
+
     return result
 
 def loadLora(loraModelName):
     global pipe
-    pipe.load_lora_weights(join(model_path), weight_name=loraModelName+'.safetensors')
+    pipe.load_lora_weights(join(lora_model_path), weight_name=loraModelName+'.safetensors')
     # model_id = "checkpoint-25000" #if needed
 
 
@@ -147,7 +148,7 @@ def inpaint(fileName, maskName, prompt, nagative_prompt,
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
     if loraModel != 'None':
-        pipe.load_lora_weights(join(model_path), weight_name=loraModel+'.safetensors')
+        pipe.load_lora_weights(join(lora_model_path), weight_name=loraModel+'.safetensors')
     else:
         pipe.unload_lora_weights()
 
@@ -225,7 +226,7 @@ def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
     if loraModel != 'None':
-        pipe.load_lora_weights(join(model_path), weight_name=loraModel+'.safetensors')
+        pipe.load_lora_weights(join(lora_model_path), weight_name=loraModel+'.safetensors')
     else:
         pipe.unload_lora_weights()
 
@@ -244,7 +245,7 @@ def img2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, i
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
     if loraModel != 'None':
-        pipe.load_lora_weights(join(model_path), weight_name=loraModel+'.safetensors')
+        pipe.load_lora_weights(join(lora_model_path), weight_name=loraModel+'.safetensors')
     else:
         pipe.unload_lora_weights()
 

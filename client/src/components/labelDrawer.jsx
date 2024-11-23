@@ -224,7 +224,7 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
   const filteredLabels = labelList.filter(label => label['class'] === classTab); // 确保 classTab 和 label['class'] 比较时为字符串
 
   return (
-    <React.Fragment>
+    <>
       <Drawer anchor={'right'} open={open} onClose={() => setLabelOpen(false)} disableEnforceFocus>
         <Box
           height="100vh"
@@ -329,6 +329,6 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
       <Button sx={{mr:'15px'}} variant="contained" color="secondary" onClick={openFunc === 'add'?addCell:putCell}>Submit</Button>
       </DialogActions>
     </Dialog>
-    </React.Fragment>
+    </>
   );
 }

@@ -3,7 +3,7 @@ import axios from 'axios'
 const serverURL = 'http://localhost:3001'; //121.40.100.199:12538 | http://localhost:3001
 const pythonURL = 'http://localhost:4000'; //121.40.100.199:12539 | http://localhost:4000
 
-export const fileURL = serverURL+'/getFile?filename='
+export const fileURL = new URL('/getFile?filename=', serverURL).href
 
 
 axios.defaults.withCredentials = false; //連本地的時候
@@ -13,7 +13,7 @@ axios.defaults.withCredentials = false; //連本地的時候
 
 
 export function server ({ url, method, headers, data, params }, option = {}) {
-    return axios(serverURL+url, {
+    return axios(new URL(url,serverURL).href, {
         method: method || 'GET', 
         data,
         params,
@@ -26,7 +26,7 @@ export function server ({ url, method, headers, data, params }, option = {}) {
 }
 
 export function django ({ url, method, headers, data, params }, option = {}) {
-    return axios(pythonURL+url, {
+    return axios(new URL(url,pythonURL).href, {
         method: method || 'GET', 
         data,
         params,

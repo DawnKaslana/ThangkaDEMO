@@ -1,6 +1,6 @@
 // React and Basic import
 import * as React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, forwardRef } from 'react';
 import clsx from 'clsx';
 import { makeStyles, useTheme, createTheme, ThemeProvider } from '@material-ui/core/styles';
 
@@ -40,6 +40,13 @@ import Tooltip from '@mui/material/Tooltip';
 
 
 //Icon import
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import AddIcon from '@mui/icons-material/Add';
+import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import AutoModeIcon from '@mui/icons-material/AutoMode';
 import InboxIcon from '@mui/icons-material/MoveToInbox';
 import MailIcon from '@mui/icons-material/Mail';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -48,16 +55,11 @@ import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import HelpIcon from '@mui/icons-material/Help';
 import UploadIcon from '@mui/icons-material/Upload';
 import SendIcon from '@mui/icons-material/Send';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import ImageIcon from '@mui/icons-material/Image';
 import HideImageIcon from '@mui/icons-material/HideImage';
 import MenuIcon from '@mui/icons-material/Menu';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import SaveIcon from '@mui/icons-material/Save';
-import AddIcon from '@mui/icons-material/Add';
-import AddBoxIcon from '@mui/icons-material/AddBox';
 import ClearIcon from '@mui/icons-material/Clear';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import FontDownloadIcon from '@mui/icons-material/FontDownload';
@@ -67,6 +69,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import TranslateIcon from '@mui/icons-material/Translate';
 import GTranslateIcon from '@mui/icons-material/GTranslate';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
 
 // other func
 import RViewerJS from 'viewerjs-react'
@@ -116,12 +120,14 @@ const SettingDrawer = ({ open, generateHandler, logout,
   type, setType,
   model, setModel,
   loraModel, setLoraModel, loraList,
+  CNModel, setCNModel, CNList,
   imageCount, setImageCount,
   steps, setSteps,
   loading, setLoading,
   generateState, setGenerateState,
   selectedImg, setSelectedImg,
   selectedMask, setSelectedMask,
+  selectedCNImg, setSelectedCNImg,
   noiseRatio, setNoiseRatio,
   randomSeed, setRandomSeed, getRandomSeed,
   promptWeight, setPromptWeight,
@@ -133,25 +139,43 @@ const SettingDrawer = ({ open, generateHandler, logout,
   // img Src
   const [imageSrc, setImageSrc] = useState(null);
   const [maskSrc, setMaskSrc] = useState(null);
+  const [CNImgSrc, setCNImgSrc] = useState(null);
   const inputImgRef = useRef();
   const inputMaskRef = useRef();
+  const inputCNRef = useRef();
 
   // control Help
   const [helpOpen, setHelpOpen] = useState(false)
 
   const handleOnClickImgUpload = () => { inputImgRef.current.click(); };
   const handleOnClickMaskUpload = () => { inputMaskRef.current.click(); };
-  const selectImgHandler = (event) => {
-    setSelectedImg(event.target.files[0]);
-    preview(event, "img");
-  };
-  const selectMaskHandler = (event) => {
-    setSelectedMask(event.target.files[0]);
-    preview(event, "mask");
+  const handleOnClickCNUpload = () => { inputCNRef.current.click(); };
+  const selectImgHandler = (event, type) => {
+    if (type === "img") {
+      setSelectedImg(event.target.files[0]);
+    } else if (type === "mask") {
+      setSelectedMask(event.target.files[0]);
+      preview(event, "mask");
+    } else if (type === "cn") {
+      setSelectedCNImg(event.target.files[0]);
+    }
+    preview(event, type);
   };
 
-  const handleChangeSteps = (value) =>{
-    value <= 200 ? setSteps(value) : setSteps(200)
+  const clearImg = (type) => {
+    if (type === "img") {
+      setImageSrc(null)
+      setSelectedImg(undefined)
+      inputImgRef.current.value = ''
+    } else if (type === "mask") {
+      setMaskSrc(null)
+      setSelectedMask(undefined)
+      inputMaskRef.current.value = ''
+    } else if (type === "cn") {
+      setCNImgSrc(null)
+      setSelectedCNImg(undefined)
+      inputCNRef.current.value = ''
+    }
   }
 
   const preview = (event, type) => {
@@ -160,7 +184,9 @@ const SettingDrawer = ({ open, generateHandler, logout,
 
     reader.addEventListener("load", function () {
       // convert image file to base64 string
-     type === "img"?setImageSrc(reader.result):setMaskSrc(reader.result)
+      if(type === "img") setImageSrc(reader.result)
+      else if(type === "mask") setMaskSrc(reader.result)
+      else if(type === "cn") setCNImgSrc(reader.result)
     }, false);
 
     if (file) {
@@ -203,14 +229,18 @@ const SettingDrawer = ({ open, generateHandler, logout,
     }
   }
 
-  const handleChangeLora = (value) => {
-    setLoraModel(value)
+  const handleChangeLora = (value) =>  setLoraModel(value)
+  const handleChangeCN = (value) =>   setCNModel(value)
+
+  const handleChangeSteps = (value) =>{
+    //設置上限
+    value <= 200 ? setSteps(value) : setSteps(200)
   }
 
   const Options = () => {
     return(
       <Box sx={{p:2}}>
-        <Box className={classes.flexColCenter} sx={{mb:1}}>
+        <Box className={classes.flexCol+" "+classes.flexCenter} sx={{mb:1}}>
           <Button
             size="large"
             sx={{
@@ -260,76 +290,108 @@ const SettingDrawer = ({ open, generateHandler, logout,
             </MenuItem>
           ))}
         </Select>
-      
+
+        {/* 是否使用邊緣模型(controlNet canny 2) */}
+        <Typography variant="h6" mt={2}>控制模型选择</Typography>
+        <Select value={CNModel} onChange={(e)=>handleChangeCN(e.target.value)}
+                fullWidth color="secondary">
+            <MenuItem key={0} value={'None'}>
+              None
+            </MenuItem>
+          {CNList?.map((item,idx) => (
+            <MenuItem key={idx+1} value={item}>
+              {item}
+            </MenuItem>
+          ))}
+        </Select>
+
         {/* 上傳图片 */}
-        { type === 'text2img'? null: <Box className={classes.flexRow}>
-        <Typography variant="h6" mt={1}>上傳图片</Typography>
-          <Box sx={{flexGrow:1}}/>
-          {imageSrc? <Box>
-            <IconButton edge="start" sx={{mr: 2}} onClick={handleOnClickImgUpload}>
-              <AddBoxIcon/>
-            </IconButton>
-            <IconButton edge="start" onClick={()=>setImageSrc(null)}>
-              <ClearIcon/>
-            </IconButton>
-          </Box> :null}
-        </Box>}
-        { type === 'text2img'? null: <Box
-          sx={{
-            width: "100%",
-            height: "200px",
-            border: "1px dashed gray",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        { type === 'text2img'? null: 
+          <Typography variant="h6" mt={2}>上傳图片</Typography>}
+        { type === 'text2img'? null: <Box className={classes.imgBox}>
           <input style={{ display: 'none' }}
             ref={inputImgRef}
             type="file" accept="image/*"
-            onChange={selectImgHandler} />
+            onChange={(e)=>selectImgHandler(e,"img")} />
+          {imageSrc?
+          <Box sx={{position:"absolute"}}>
+            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={imageSrc} /></RViewerJS>
+          </Box>: null}
           {!imageSrc?
-            <IconButton edge="start" onClick={handleOnClickImgUpload}>
-              <AddIcon fontSize="large" />
-            </IconButton>:
-            <RViewerJS><img height="200px" src={imageSrc}/></RViewerJS>
-          }
+          <IconButton onClick={handleOnClickImgUpload}>
+            <AddIcon fontSize="large" />
+          </IconButton> :
+          <Box className={classes.flexCol} sx={{marginLeft:"auto", marginBottom:"auto"}}>
+            <IconButton sx={{}} onClick={()=>clearImg("img")}>
+              <ClearIcon/>
+            </IconButton>
+            <IconButton sx={{}} onClick={handleOnClickImgUpload}>
+              <AddBoxOutlinedIcon />
+            </IconButton>
+          </Box>}
         </Box>}
 
         {/* 上傳Mask */}
-        { type === 'inpaint'? <Box className={classes.flexRow}>
-          <Typography variant="h6" mt={1}>上傳遮罩</Typography>
-          <Box sx={{flexGrow:1}}/>
-          {maskSrc? <Box>
-            <IconButton edge="start" sx={{mr: 2}} onClick={handleOnClickMaskUpload}>
-              <AddBoxIcon/>
-            </IconButton>
-            <IconButton edge="start" onClick={()=>setMaskSrc(null)}>
-              <ClearIcon/>
-            </IconButton>
-          </Box> :null}
-        </Box>: null}
-        { type === 'inpaint'? <Box
-          sx={{
-            width: "100%",
-            height: "200px",
-            border: "1px dashed gray",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        { type === 'inpaint'? 
+          <Typography variant="h6" mt={1}>上傳遮罩</Typography>: null}
+        { type === 'inpaint'? <Box className={classes.imgBox}>
           <input style={{ display: 'none' }}
             ref={inputMaskRef}
             type="file" accept="image/*"
-            onChange={selectMaskHandler} />
+            onChange={(e)=>selectImgHandler(e,"mask")} />
+          {maskSrc?
+          <Box sx={{position:"absolute"}}>
+            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={maskSrc} /></RViewerJS>
+          </Box>: null}
           {!maskSrc?
-            <IconButton edge="start" onClick={handleOnClickMaskUpload}>
-              <AddIcon fontSize="large" />
-            </IconButton>:
-            <RViewerJS><img height="200px" src={maskSrc} /></RViewerJS>
-          }
+          <IconButton onClick={handleOnClickMaskUpload}>
+            <AddIcon fontSize="large" />
+          </IconButton> :
+          <Box className={classes.flexCol} sx={{marginLeft:"auto", marginBottom:"auto"}}>
+            <IconButton sx={{}} onClick={()=>clearImg("mask")}>
+              <ClearIcon/>
+            </IconButton>
+            <IconButton sx={{}} onClick={handleOnClickMaskUpload}>
+              <AddBoxOutlinedIcon />
+            </IconButton>
+          </Box>}
+
+
+
         </Box>:null}
+
+        {/* 上傳CNimg */}
+        { CNModel === 'None'? null:
+          <Box className={classes.flexRow}>
+          <Typography variant="h6" mt={1}>上傳控制图片</Typography>
+            <Box sx={{flexGrow:1}}/>
+            <IconButton sx={{ml: 1}}>
+              <AutoModeIcon/>
+            </IconButton>
+          </Box>}
+        { CNModel === 'None'? null: <Box className={classes.imgBox}>
+          <input style={{ display: 'none' }}
+            ref={inputCNRef}
+            type="file" accept="image/*"
+            onChange={(e)=>selectImgHandler(e,"cn")} />
+          {CNImgSrc?
+          <Box sx={{position:"absolute"}}>
+            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={CNImgSrc} /></RViewerJS>
+          </Box>: null}
+          {!CNImgSrc?
+            <IconButton onClick={handleOnClickCNUpload}>
+              <AddIcon fontSize="large" />
+            </IconButton> :
+            <Box className={classes.flexCol} sx={{marginLeft:"auto", marginBottom:"auto"}}>
+              <IconButton sx={{}} onClick={()=>clearImg("cn")}>
+                <ClearIcon/>
+              </IconButton>
+              <IconButton sx={{}} onClick={handleOnClickCNUpload}>
+                <AddBoxOutlinedIcon />
+              </IconButton>
+            </Box>}
+        </Box>}
+
 
         <Box className={classes.flexRow} sx={{justifyContent:'space-between', mt:2}}>
           <Box sx={{width:'25%'}}>
@@ -352,6 +414,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
               ))}
             </Select>
           </Box>
+
           {/* 隨機種子 */}
           <Box sx={{width:'45%'}}>
             <Box className={classes.flexRow}>
@@ -509,6 +572,12 @@ const SettingDrawer = ({ open, generateHandler, logout,
     handleTranslateClose()
   }
 
+  const myListButton = forwardRef((props, ref) => (
+    <button ref={ref} className="FancyButton">
+      {props.children}
+    </button>
+  ));
+
 
   return (
     
@@ -543,6 +612,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
         </DialogContent>
       </Dialog>
 
+      {/* Warning: findDOMNode is deprecated and will be removed in the next major release. (because Tooltip) */}
       {!open ? <List>
         <Tooltip title={<h3>inpaint model</h3>} placement="right" arrow>
         <ListItem button selected={type === 'inpaint'} onClick={(e)=>handleChangeType(e,'inpaint')}>
@@ -610,10 +680,12 @@ const SettingDrawer = ({ open, generateHandler, logout,
       <Divider />
       <List>
         <Tooltip title={<h3>Logout</h3>} placement="right" arrow>
-        <ListItem button onClick={logout}>
-          <ListItemIcon sx={{ pl: .5 }}><ExitToAppIcon /></ListItemIcon>
-          <ListItemText>Logout</ListItemText>
-        </ListItem>
+          <ListItem button onClick={logout}>
+            <ListItemIcon sx={{ pl: .5 }}>
+              <ExitToAppIcon />
+            </ListItemIcon>
+            <ListItemText>Logout</ListItemText>
+          </ListItem>
         </Tooltip>
         <Tooltip title={<h3>Help</h3>} placement="right" arrow>
         <ListItem button onClick={()=>setHelpOpen(true)}>

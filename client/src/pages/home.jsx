@@ -7,37 +7,10 @@ import Cookies from 'universal-cookie';
 // React MUI import
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Chip from '@mui/material/Chip';
-import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Container from '@mui/material/Container';
-import DialogTitle from '@mui/material/DialogTitle';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import Divider from '@mui/material/Divider';
-import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormGroup from '@mui/material/FormGroup';
-import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import MenuList from '@mui/material/MenuList';
-import Select from '@mui/material/Select';
-import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
-import Toolbar from '@mui/material/Toolbar';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
@@ -54,19 +27,6 @@ import SettingDrawer from '../components/settingDrawer.jsx';
 import LabelDrawer from '../components/labelDrawer.jsx';
 import loadImg from '../images/purpleLoader-crop.gif'
 
-//Icon import
-import UploadIcon from '@mui/icons-material/Upload';
-import SendIcon from '@mui/icons-material/Send';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
-import ImageIcon from '@mui/icons-material/Image';
-import HideImageIcon from '@mui/icons-material/HideImage';
-import MenuIcon from '@mui/icons-material/Menu';
-import ClearIcon from '@mui/icons-material/Clear';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import SaveIcon from '@mui/icons-material/Save';
-import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 
 //api
 import { server, django, file_url } from '../api.js'
@@ -75,6 +35,7 @@ import ReactMarkdown from 'react-markdown'
 // cookie
 const cookies = new Cookies();
 
+// pre-data
 const helloText = "Hello!這裡是TY的Thangka Inpaint DEMO."
 const preNegativePrompt = "bad,ugly,disfigured,blurry,watermark,normal quality,jpeg artifacts,low quality,worst quality,cropped,low res"
 
@@ -107,16 +68,18 @@ export function Home() {
   const [messages, setMessages] = useState([])
   const [chatDialogs, setChatDialogs] = useState([{type:'msg', role: "assistant", content:helloText}]);
 
-  // params
+  // message input
   const [inputText, setInput] = useState('');
 
   // generate params
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState(preNegativePrompt);
-  const [type, setType] = useState('')
-  const [model, setModel] = useState('')
+  const [type, setType] = useState('text2img')
+  const [model, setModel] = useState('SD21')
   const [loraModel, setLoraModel] = useState('None')
   const [loraList, setLoraList] = useState([])
+  const [CNList, setCNList] = useState([])
+  const [CNModel, setCNModel] = useState('None')
   const [imageCount, setImageCount] = useState(1)
   const [steps, setSteps] = useState(30)
   const [noiseRatio, setNoiseRatio] = useState(0.5)
@@ -126,6 +89,7 @@ export function Home() {
   // imgSrc pramas
   const [selectedImg, setSelectedImg] = useState(undefined);
   const [selectedMask, setSelectedMask] = useState(undefined);
+  const [selectedCNImg, setSelectedCNImg] = useState(undefined);
   const [result, setResult] = useState('');
   const [outputSrc, setOutputSrc] = useState(null);
 
@@ -133,10 +97,11 @@ export function Home() {
   useEffect(() => {
     django({ url: '/getPipeType/', method: 'get'})
     .then(res => {
-      console.log(res.data.type)
+      console.log(res.data)
       setType(res.data.type) 
       setModel(res.data.model)
       setLoraList(res.data.loraList)
+      setCNList(res.data.cnList)
     })
     .catch((err)=>setGenerateState(false))
   }, []);
@@ -228,12 +193,48 @@ export function Home() {
   }
 
   const generateHandler = (args) => {
-    if (args.prompt)setPrompt(args.prompt)
+    if (args.prompt) setPrompt(args.prompt)
+    if (CNModel !== 'None' && !selectedCNImg){
+      setInputError(true)
+      setErrorMsg("請輸入控制圖像。")
+      return
+    }
+
+    let generateFunc
+
+    if (type === 'inpaint'){
+      if (selectedImg && selectedMask) {
+        generateFunc = inpaintGenerate
+      } else {
+        setInputError(true)
+        if (!selectedImg) setErrorMsg("請輸入待修復圖像。")
+        if (selectedImg && !selectedMask) setErrorMsg("請輸入遮罩圖像。")
+        return
+      }
+    } else if (type === 'text2img') {
+      if (args.prompt || prompt){
+        generateFunc = text2imgGenerate
+      } else {
+        setInputError(true)
+        setErrorMsg("請輸入prompt。")
+        return
+      }
+    } else if (type === 'img2img') {
+      if (selectedImg) {
+        generateFunc = img2imgGenerate
+      } else {
+        setInputError(true)
+        setErrorMsg("請輸入圖像。")
+        return
+      }
+    }
+
     const formData = new FormData();
     formData.append('prompt', args.prompt?args.prompt:prompt);
     formData.append('negativePrompt', negativePrompt);
     formData.append('image', selectedImg);
     formData.append('mask', selectedMask);
+    formData.append('CNImg', selectedCNImg);
     formData.append('steps', steps);
     formData.append('seed', randomSeed<0?getRandomSeed():randomSeed);
     formData.append('strength', noiseRatio);
@@ -242,111 +243,75 @@ export function Home() {
     formData.append('type', type);
     formData.append('SDModel', model);
     formData.append('loraModelName', loraModel);
+    formData.append('CNModelName', CNModel);
     
-    if (type == 'inpaint'){
-      inpaintGenerate(formData)
-    } else if (type == 'text2img'){
-      text2imgGenerate(formData)
-    } else if (type == 'img2img'){
-      img2imgGenerate(formData)
-    }
+    handleNewDialog({ type: 'load', class: 'generating' })
+    setInputError(false)
+    setGenerateState(true)
+    generateFunc(formData)
   }
 
   const inpaintGenerate = (formData) => {
-    if (selectedImg && selectedMask) {
-      formData.append('image',selectedImg)
-      formData.append('mask',selectedMask)
-      handleNewDialog({ type: 'load', class: 'generating' })
-      setInputError(false)
-      setGenerateState(true)
-
-      django({ url: '/generate/', method: 'post', data: formData })
-        .then(res => {
-          setResult(res.data.msg);
-          if (res.data.msg === "successed") {
-            console.log(selectedImg.name.slice(0, -4) + "_output.png")
-            django({
-              url: '/getImg/', method: 'get', params: {
-                imageName: selectedImg.name.slice(0, -4) + "_output.png"
-              }
-            }).then(res => {
-              setOutputSrc(res.data.img)
-              handleNewDialog({ type: 'output', src: res.data.img,
-                pramas: formData})
-              setGenerateState(false)
-            })
-          }
-        }).catch((err)=>setGenerateState(false))
-
-    } else {
-      setInputError(true)
-      if (!selectedImg) setErrorMsg("請輸入待修復圖像。")
-      if (selectedImg && !selectedMask) setErrorMsg("請輸入遮罩圖像。")
-    }
+    django({ url: '/generate/', method: 'post', data: formData })
+      .then(res => {
+        setResult(res.data.msg);
+        if (res.data.msg === "successed") {
+          console.log(selectedImg.name.slice(0, -4) + "_output.png")
+          django({
+            url: '/getImg/', method: 'get', params: {
+              imageName: selectedImg.name.slice(0, -4) + "_output.png"
+            }
+          }).then(res => {
+            setOutputSrc(res.data.img)
+            handleNewDialog({ type: 'output', src: res.data.img,
+              pramas: formData})
+            setGenerateState(false)
+          })
+        }
+      }).catch((err)=>setGenerateState(false))
   }
 
   const text2imgGenerate = (formData) => {
+    let filename = userId + "_text2img_" + new Date().getTime()
+    formData.append('filename', filename);
 
-    if (formData.get('prompt')) {
-      handleNewDialog({ type: 'load', class: 'generating' })
-      setInputError(false)
-      setGenerateState(true)
-      let filename = userId + "_text2img_" + new Date().getTime()
-      formData.append('filename', filename);
-
-      django({ url: '/generate/', method: 'post', data: formData })
-        .then(res => {
-          setResult(res.data.msg);
-          if (res.data.msg === "successed") {
-            console.log(filename + ".png")
-            django({
-              url: '/getImg/', method: 'get', params: {
-                imageName: filename + ".png"
-              }
-            }).then(res => {
-              setOutputSrc(res.data.img)
-              handleNewDialog({ type: 'output', src: res.data.img,
-                pramas: formData})
-              setGenerateState(false)
-            })
-          }
-        }).catch((err)=>setGenerateState(false))
-
-    } else {
-      setInputError(true)
-      setErrorMsg("請輸入prompt。")
-    }
+    django({ url: '/generate/', method: 'post', data: formData })
+      .then(res => {
+        setResult(res.data.msg);
+        if (res.data.msg === "successed") {
+          console.log(filename + ".png")
+          django({
+            url: '/getImg/', method: 'get', params: {
+              imageName: filename + ".png"
+            }
+          }).then(res => {
+            setOutputSrc(res.data.img)
+            handleNewDialog({ type: 'output', src: res.data.img,
+              pramas: formData})
+            setGenerateState(false)
+          })
+        }
+      }).catch((err)=>setGenerateState(false))
   }
 
   const img2imgGenerate = (formData) => {
-
-    if (formData.get('selectedImg')) {
-      handleNewDialog({ type: 'load', class: 'generating' })
-      setInputError(false)
-      setGenerateState(true)
-
-      django({ url: '/generate/', method: 'post', data: formData })
-        .then(res => {
-          setResult(res.data.msg);
-          if (res.data.msg === "successed") {
-            console.log(selectedImg.name.slice(0, -4) + "_output.png")
-            django({
-              url: '/getImg/', method: 'get', params: {
-                imageName: selectedImg.name.slice(0, -4) + "_output.png"
-              }
-            }).then(res => {
-              setOutputSrc(res.data.img)
-              handleNewDialog({ type: 'output', src: res.data.img,
-                pramas: formData})
-              setGenerateState(false)
-            })
-          }
-        }).catch((err)=>setGenerateState(false))
-
-    } else {
-      setInputError(true)
-      setErrorMsg("請輸入圖像。")
-    }
+    django({ url: '/generate/', method: 'post', data: formData })
+      .then(res => {
+        setResult(res.data.msg);
+        if (res.data.msg === "successed") {
+          console.log(selectedImg.name.slice(0, -4) + "_output.png")
+          django({
+            url: '/getImg/', method: 'get', params: {
+              imageName: selectedImg.name.slice(0, -4) + "_output.png"
+            }
+          }).then(res => {
+            setOutputSrc(res.data.img)
+            handleNewDialog({ type: 'output', src: res.data.img,
+              pramas: formData})
+            setGenerateState(false)
+          })
+        }
+      }).catch((err)=>setGenerateState(false))
   }
 
 
@@ -362,7 +327,7 @@ export function Home() {
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1,p:0 }}>
       <AIAvatar/>
       <Card variant="outlined"
-            className={classes.flexColCenter}
+            className={classes.flexCol+" "+classes.flexCenter}
             sx={{ maxWidth: '50vw', pr:1, pl: 1}}>
         <ReactMarkdown className={classes.reactMarkDown}>{key<1 ? helloText : item.content}</ReactMarkdown>
       </Card>
@@ -420,7 +385,7 @@ export function Home() {
   const generatingDialog = (key) => (
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1, mb: 1 }}>
       <AIAvatar/>
-      <Card sx={{ p: 1, mr: 1 }} className={classes.flexColCenter}>
+      <Card sx={{ p: 1, mr: 1 }} className={classes.flexCol+" "+classes.flexCenter}>
         <Typography variant="h6" sx={{ mb: 1 }}>
           Generating...
         </Typography>
@@ -433,7 +398,7 @@ export function Home() {
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1,p:0 }}>
       <AIAvatar/>
       <Card variant="outlined"
-          className={classes.flexColCenter}
+          className={classes.flexCol+" "+classes.flexCenter}
           sx={{ maxWidth: '50vw', p:1}}>
           <img src={loadImg} width="80px" alt="load gif"/>
       </Card>
@@ -443,7 +408,7 @@ export function Home() {
   const userDialog = (item, key) => (
     <Box key={key} display="flex" flexDirection="row" justifyContent="right" sx={{ mt: 1, mr: 1 }}>
       <Card variant="outlined"
-            className={classes.flexColCenter}
+            className={classes.flexCol+" "+classes.flexCenter}
             sx={{ maxWidth: '50vw', p:1, mr:1}}>
           <Typography>{item.content}</Typography>
       </Card>
@@ -497,6 +462,7 @@ export function Home() {
         type={type} setType={setType} 
         model={model} setModel={setModel}
         loraModel={loraModel} setLoraModel={setLoraModel} loraList={loraList}
+        CNModel={CNModel} setCNModel={setCNModel} CNList={CNList}
         imageCount={imageCount} setImageCount={setImageCount}
         steps={steps} setSteps={setSteps}
         noiseRatio={noiseRatio} setNoiseRatio={setNoiseRatio}
@@ -506,6 +472,7 @@ export function Home() {
         generateState={generateState} setGenerateState={setGenerateState}
         selectedImg={selectedImg} setSelectedImg={setSelectedImg}
         selectedMask={selectedMask} setSelectedMask={setSelectedMask}
+        selectedCNImg={selectedCNImg} setSelectedCNImg={setSelectedCNImg}
         logout={logout}
       />
       <LabelDrawer open={labelDrawerOpen} setLabelOpen={setLabelDrawerOpen} 
