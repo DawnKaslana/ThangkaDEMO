@@ -314,6 +314,24 @@ export function Home() {
       }).catch((err)=>setGenerateState(false))
   }
 
+  const edgeGenerate = () => {
+    django({ url: '/edgeInpaint/', method: 'post', data: {} })
+      .then(res => {
+        setResult(res.data.msg);
+        if (res.data.msg === "successed") {
+          console.log(selectedImg.name.slice(0, -4) + "edge.png")
+          django({
+            url: '/getImg/', method: 'get', params: {
+              imageName: selectedImg.name.slice(0, -4) + "edge.png"
+            }
+          }).then(res => {
+            setSelectedCNImg(res.data.img)//need preview
+            setGenerateState(false)
+          })
+        }
+      }).catch((err)=>setGenerateState(false))
+  }
+
 
   //Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -456,6 +474,7 @@ export function Home() {
       <SettingDrawer open={drawerOpen}
         handleNewDialog={handleNewDialog}
         generateHandler={generateHandler}
+        edgeGenerate = {edgeGenerate}
         prompt={prompt} setPrompt={setPrompt}
         setLabelOpen={setLabelDrawerOpen} setIsNegativeLabel={setIsNegativeLabel}
         negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt} 

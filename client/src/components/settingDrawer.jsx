@@ -114,7 +114,7 @@ const listTheme = createTheme({
 });
 
 
-const SettingDrawer = ({ open, generateHandler, logout,
+const SettingDrawer = ({ open, generateHandler, edgeGenerate, logout,
   prompt, setPrompt, setLabelOpen, setIsNegativeLabel,
   negativePrompt, setNegativePrompt,
   type, setType,
@@ -125,9 +125,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
   steps, setSteps,
   loading, setLoading,
   generateState, setGenerateState,
-  selectedImg, setSelectedImg,
-  selectedMask, setSelectedMask,
-  selectedCNImg, setSelectedCNImg,
+  setSelectedImg, setSelectedMask, setSelectedCNImg,
   noiseRatio, setNoiseRatio,
   randomSeed, setRandomSeed, getRandomSeed,
   promptWeight, setPromptWeight,
@@ -365,7 +363,7 @@ const SettingDrawer = ({ open, generateHandler, logout,
           <Box className={classes.flexRow}>
           <Typography variant="h6" mt={1}>上傳控制图片</Typography>
             <Box sx={{flexGrow:1}}/>
-            <IconButton sx={{ml: 1}}>
+            <IconButton sx={{ml: 1}} onClick={edgeGenerate}>
               <AutoModeIcon/>
             </IconButton>
           </Box>}
@@ -571,12 +569,6 @@ const SettingDrawer = ({ open, generateHandler, logout,
     }
     handleTranslateClose()
   }
-
-  const myListButton = forwardRef((props, ref) => (
-    <button ref={ref} className="FancyButton">
-      {props.children}
-    </button>
-  ));
 
 
   return (

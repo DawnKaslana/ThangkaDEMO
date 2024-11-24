@@ -90,6 +90,11 @@ def generate(request):
 
         return JsonResponse({'msg': "uploaded"})
 
+def generate_edge(request):
+    if request.method == 'POST':
+        diffusion.edge_inpaint()
+        return JsonResponse({'msg': "successed"})
+
 def send_img(request):
     if request.method == 'GET':
         imageName = request.GET.get("imageName")

@@ -1,3 +1,5 @@
+import os
+import subprocess
 from os.path import join, isdir, isfile
 from os import mkdir, listdir
 from diffusers import StableDiffusionPipeline, DDIMScheduler, \
@@ -20,17 +22,20 @@ torch.cuda.set_device(0)
 """
 presetting
 """
+edge_connect_dir = "/mnt/Workspace/edge-connect"
 sd_model_path = "/mnt/Workspace/SDmodels/"
 cn_model_path = "/mnt/Workspace/SDmodels/CN"
 lora_model_path = "/mnt/Workspace/SDmodels/Lora/"
+edge_model_path = "/mnt/Workspace/SDmodels/edge/"
 filePath = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media"
-output_path = join(filePath,"output")
+edge_output_path = join(filePath, "edge_output")
+output_path = join(filePath, "output")
 
 if not isdir(output_path):
     mkdir(output_path)
 
-typeSet = "inpaint" #inpaint text2img img2img
-modelSet = "SDI2" #SDI2 SD21
+typeSet = "text2img" #inpaint text2img img2img
+modelSet = "SD21" #SDI2 SD21
 
 """
 model list (what type can use)
@@ -48,6 +53,7 @@ def loadModel(generateType, model):
     modelSet = model
 
 def changeModel(generateType, model):
+    # torch.cuda.empty_cache()
     global pipe
     global typeSet
     global modelSet
@@ -108,13 +114,13 @@ def getModelType():
         loraList = listdir(lora_model_path)
         for item in loraList:
             if isfile(join(lora_model_path, item)):
-                if item.split('.')[1] == 'safetensors':
+                if item.split('.')[-1] == 'safetensors':
                     result['loraList'].append(item.split('.')[0])
 
     cnList = listdir(cn_model_path)
     for item in cnList:
         if isfile(join(cn_model_path, item)):
-            if item.split('.')[1] == 'safetensors':
+            if item.split('.')[-1] == 'safetensors':
                 result['cnList'].append(item.split('.')[0])
 
     return result
@@ -139,7 +145,26 @@ def make_inpaint_condition(image, image_mask):
     return image
 
 """
-main func : inpaint text2img img2img img2text
+edge
+"""
+def edge_inpaint():
+    #必須有原圖 只有原圖tocanny 沒給mask不用跑edge修復
+    filename = "6.4_a_1024x1024-1_img.png"
+    maskname = "6.4_a_1024x1024-1_mask.png"
+    py_dir = join(edge_connect_dir, 'test.py')
+    checkpoints = join(edge_model_path,'thangka_AC') #thangkaAC_1
+    input = join(filePath, filename)
+    mask = join(filePath, maskname)
+    command = "python3 %s --model 1 --checkpoints %s --input %s --mask %s --output %s"\
+              % (py_dir, checkpoints, input, mask, edge_output_path)
+    command = command.split(" ")
+
+    res = subprocess.run(command, check=True, timeout=30)
+    print(res)
+
+
+"""
+main func : inpaint text2img img2img img2text(not finish)
 """
 def inpaint(fileName, maskName, prompt, nagative_prompt,
             steps, seed, strength, guidance, imageCount, SDModel, loraModel):
@@ -199,7 +224,6 @@ def inpaint(fileName, maskName, prompt, nagative_prompt,
             generator=generator,
         ).images[0]
 
-    # output
     # output.show()
 
     newimage = Image.new('RGBA', image.size, (0, 0, 0, 0))

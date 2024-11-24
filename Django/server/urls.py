@@ -32,6 +32,7 @@ urlpatterns = [
     path('getImg/', thangka.send_img),
     path('changePipe/', thangka.changePipe),
     path('getPipeType/', thangka.getType),
+    path('edgeInpaint/', thangka.generate_edge),
     path('chat/', ernie_bot.chat),
     path('translate/', ernie_bot.translate)
 ]

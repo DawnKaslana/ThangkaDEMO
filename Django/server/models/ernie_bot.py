@@ -72,7 +72,7 @@ functions = [
             'properties': {
                 'prompt': {
                     'type': 'string',
-                    'description': "翻譯成英文的圖像描述",
+                    'description': "圖像描述",
                 },
             },
             'required': [
@@ -163,42 +163,47 @@ def generateImgByErnie(prompt):
         width=512,
         height=512
     )
-    print('generateImgByErnie')
 
-def translateByErnie(text, lang='eng'):
 
+def refineByErnie(text):
     messages = [{
         "role": "user",
-        "content": "將'" + text + "'翻譯成" + lang + "，只輸出" + lang
+        "content": "從'" + text + "'中擷取關於圖像的描述並進行優化，使生成效果更好，只輸出優化後的圖像描述內容（不要太長）"
     }]
 
     response = erniebot.ChatCompletion.create(
         model="ernie-3.5",
         messages=messages,
-        functions=functions
     )
 
+    print("refineByErnie:"+response.get_result())
+    return response.get_result()
+
+def translateByErnie(text, lang='eng', generate=False):
+    if generate:
+        text = refineByErnie(text)
+
+    messages = [{
+        "role": "user",
+        "content": "將'" + text + "'翻译成" + lang + "，只输出" + lang
+    }]
+
+    response = erniebot.ChatCompletion.create(
+        model="ernie-3.5",
+        messages=messages,
+    )
+
+    print("translateByErnie:"+str(response.get_result()))
     return response.get_result()
 
 
 def optimizePrompt(prompt):
-    messages = [{
-        "role": "user",
-        "content": "優化、修改、加強輸入的文生圖文本提示'"+prompt+"'，讓生成效果更好"
-    }]
+    prompt = refineByErnie(prompt)
 
-    response = erniebot.ChatCompletion.create(
-        model="ernie-3.5",
-        messages=messages,
-        functions=functions
-    )
-
-    result = response.get_result()
-    print(result)
     return JsonResponse({
         "role": "assistant",
-        "prompt": result,
-        "content": "已將prompt優化為："+result,
+        "prompt": prompt,
+        "content": "已將prompt優化為："+prompt,
     })
 
 includeChinese = lambda x:sum([1 if u'\u4e00' <= i <= u'\u9fff' else 0 for i in x])>0
@@ -210,6 +215,7 @@ def translate(request):
         return JsonResponse({"text": translateByErnie(text, lang)})
 
 def text2img(prompt):
+    print('text2img prompt:'+prompt)
     info = diffusion.getModelType()
     content = ""
     command = ""
@@ -219,7 +225,7 @@ def text2img(prompt):
         command = "text2img"
 
     if includeChinese(prompt):
-        prompt = translateByErnie(prompt)
+        prompt = translateByErnie(prompt, generate=True)
 
     return JsonResponse({
             "role": "assistant",
@@ -245,7 +251,7 @@ def inpaint(prompt):
         })
 
 def changeParams(args):
-    print(args)
+    # print(args)
     params = {}
 
     if 'prompt' in args: params['prompt'] = args['prompt']
@@ -265,7 +271,7 @@ def chat(request):
     if request.method == 'POST':
         messages = request.POST.get("messages")
         messages = json.loads(messages)
-        print(messages)
+        # print(messages)
 
         response = erniebot.ChatCompletion.create(
             model="ernie-3.5",
