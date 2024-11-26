@@ -8,60 +8,59 @@ models = erniebot.Model.list()
 erniebot.api_type = "aistudio"
 erniebot.access_token = "a71afcff2e5ee885c6117c59d563f0d8370d6a0d"
 
-"""
-[{
-    "role": "user",
-    "content": "请问你是谁？"
-}, {
-    "role": "assistant",
-    "content":
-        "我是百度公司开发的人工智能语言模型，我的中文名是文心一言，英文名是ERNIE-Bot，可以协助您完成范围广泛的任务并提供有关各种主题的信息，比如回答问题，提供定义和解释及建议。如果您有任何问题，请随时向我提问。"
-}, {
-    "role": "user",
-    "content": "我在深圳，周末可以去哪里玩？"
-}]
-"""
+# templateMassages=[{
+#     "role": "user",
+#     "content": "请问你是谁？"
+# }, {
+#     "role": "assistant",
+#     "content":
+#         "我是百度公司开发的人工智能语言模型，我的中文名是文心一言，英文名是ERNIE-Bot，可以协助您完成范围广泛的任务并提供有关各种主题的信息，比如回答问题，提供定义和解释及建议。如果您有任何问题，请随时向我提问。"
+# }, {
+#     "role": "user",
+#     "content": "我在深圳，周末可以去哪里玩？"
+# }]
 
-template=[{
-        'name': 'get_current_temperature',
-        'description': "获取指定城市的气温",
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'location': {
-                    'type': 'string',
-                    'description': "城市名称",
-                },
-                'unit': {
-                    'type': 'string',
-                    'enum': [
-                        '摄氏度',
-                        '华氏度',
-                    ],
-                },
-            },
-            'required': [
-                'location',
-                'unit',
-            ],
-        },
-        'responses': {
-            'type': 'object',
-            'properties': {
-                'temperature': {
-                    'type': 'integer',
-                    'description': "城市气温",
-                },
-                'unit': {
-                    'type': 'string',
-                    'enum': [
-                        '摄氏度',
-                        '华氏度',
-                    ],
-                },
-            },
-        },
-    }]
+
+# templateFunc=[{
+#         'name': 'get_current_temperature',
+#         'description': "获取指定城市的气温",
+#         'parameters': {
+#             'type': 'object',
+#             'properties': {
+#                 'location': {
+#                     'type': 'string',
+#                     'description': "城市名称",
+#                 },
+#                 'unit': {
+#                     'type': 'string',
+#                     'enum': [
+#                         '摄氏度',
+#                         '华氏度',
+#                     ],
+#                 },
+#             },
+#             'required': [
+#                 'location',
+#                 'unit',
+#             ],
+#         },
+#         'responses': {
+#             'type': 'object',
+#             'properties': {
+#                 'temperature': {
+#                     'type': 'integer',
+#                     'description': "城市气温",
+#                 },
+#                 'unit': {
+#                     'type': 'string',
+#                     'enum': [
+#                         '摄氏度',
+#                         '华氏度',
+#                     ],
+#                 },
+#             },
+#         },
+#     }]
 
 functions = [
     {
@@ -119,13 +118,13 @@ functions = [
     },
     {
         'name': 'optimizePrompt',
-        'description': "優化、修改、加強輸入的文生圖文本提示，讓生成效果更好",
+        'description': "優化、修改、加強輸入的圖像描述文本，讓生成效果更好",
         'parameters': {
             'type': 'object',
             'properties': {
                 'prompt': {
                     'type': 'string',
-                    'description': "圖像描述/文本描述/prompt",
+                    'description': "圖像描述/描述文本/prompt",
                 },
             },
         },
@@ -198,12 +197,20 @@ def translateByErnie(text, lang='eng', generate=False):
 
 
 def optimizePrompt(prompt):
-    prompt = refineByErnie(prompt)
+    print("original prompt:"+prompt)
+    if prompt:
+        prompt = refineByErnie(prompt)
 
     return JsonResponse({
         "role": "assistant",
-        "prompt": prompt,
+        "params": {prompt},
+        "command": "changeParams",
         "content": "已將prompt優化為："+prompt,
+    })
+
+def send_command(command):
+    return JsonResponse({
+        "command": command,
     })
 
 includeChinese = lambda x:sum([1 if u'\u4e00' <= i <= u'\u9fff' else 0 for i in x])>0
@@ -266,7 +273,6 @@ def changeParams(args):
         })
 
 
-
 def chat(request):
     if request.method == 'POST':
         messages = request.POST.get("messages")
@@ -288,11 +294,13 @@ def chat(request):
             name2function = {'text2img': text2img,
                              'inpaint': inpaint,
                              'changeParams': changeParams,
-                             'optimizePrompt': optimizePrompt}
+                             'optimizePrompt': send_command}
             func = name2function[result['name']]
             if result['name'] == 'changeParams':
                 args = json.loads(result['arguments'])
                 answer = func(args)
+            elif result['name'] == 'optimizePrompt':
+                answer = func('optimizePrompt')
             else:
                 args = json.loads(result['arguments'])
                 answer = func(prompt=args['prompt'])

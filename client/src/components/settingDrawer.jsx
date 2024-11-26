@@ -114,7 +114,8 @@ const listTheme = createTheme({
 });
 
 
-const SettingDrawer = ({ open, generateHandler, edgeGenerate, logout,
+const SettingDrawer = ({ open, 
+  generateHandler, edgeGenerate, handleChange, 
   prompt, setPrompt, setLabelOpen, setIsNegativeLabel,
   negativePrompt, setNegativePrompt,
   type, setType,
@@ -123,12 +124,14 @@ const SettingDrawer = ({ open, generateHandler, edgeGenerate, logout,
   CNModel, setCNModel, CNList,
   imageCount, setImageCount,
   steps, setSteps,
-  loading, setLoading,
-  generateState, setGenerateState,
-  setSelectedImg, setSelectedMask, setSelectedCNImg,
+  loading, generateState,
+  CNImgSrc, setCNImgSrc,
+  setSelectedImg, setSelectedMask, setSelectedCNImg, 
+  setSelectedImgGCN, 
   noiseRatio, setNoiseRatio,
   randomSeed, setRandomSeed, getRandomSeed,
   promptWeight, setPromptWeight,
+  logout,
 }) => {
   const theme = useTheme();
   const classes = useStyles();
@@ -137,25 +140,29 @@ const SettingDrawer = ({ open, generateHandler, edgeGenerate, logout,
   // img Src
   const [imageSrc, setImageSrc] = useState(null);
   const [maskSrc, setMaskSrc] = useState(null);
-  const [CNImgSrc, setCNImgSrc] = useState(null);
   const inputImgRef = useRef();
   const inputMaskRef = useRef();
   const inputCNRef = useRef();
+  const inputImgforGCNRef = useRef();
 
-  // control Help
+  // control Help Dialog
   const [helpOpen, setHelpOpen] = useState(false)
 
   const handleOnClickImgUpload = () => { inputImgRef.current.click(); };
   const handleOnClickMaskUpload = () => { inputMaskRef.current.click(); };
   const handleOnClickCNUpload = () => { inputCNRef.current.click(); };
+  const handleOnClickImgGCNUpload = () => { inputImgforGCNRef.current.click(); };
   const selectImgHandler = (event, type) => {
     if (type === "img") {
       setSelectedImg(event.target.files[0]);
     } else if (type === "mask") {
       setSelectedMask(event.target.files[0]);
-      preview(event, "mask");
     } else if (type === "cn") {
       setSelectedCNImg(event.target.files[0]);
+      console.log('IsUploadCN:true')
+    } else if (type === "gcn") {
+      setSelectedImgGCN(event.target.files[0]);
+      edgeGenerate(event.target.files[0])
     }
     preview(event, type);
   };
@@ -191,20 +198,6 @@ const SettingDrawer = ({ open, generateHandler, edgeGenerate, logout,
       reader.readAsDataURL(file);
     }
   };
-
-  const handleChange = (newType, newModel) => {
-    setModel(newModel)
-    setLoading(true)
-    const formData = new FormData();
-    formData.append('type', newType);
-    formData.append('model', newModel);
-    django({ url: '/changePipe/', method: 'post', data: formData })
-        .then(res => {
-          if (res.data.msg === "successed") {
-            setLoading(false)
-          }
-        }).catch((err)=>setGenerateState(false))
-  }
 
   const handleChangeType = (e, typeValue) => {
     if (typeValue !== type){
@@ -363,7 +356,11 @@ const SettingDrawer = ({ open, generateHandler, edgeGenerate, logout,
           <Box className={classes.flexRow}>
           <Typography variant="h6" mt={1}>上傳控制图片</Typography>
             <Box sx={{flexGrow:1}}/>
-            <IconButton sx={{ml: 1}} onClick={edgeGenerate}>
+            <input style={{ display: 'none' }}
+            ref={inputImgforGCNRef}
+            type="file" accept="image/*"
+            onChange={(e)=>selectImgHandler(e,"gcn")} />
+            <IconButton disabled={generateState} sx={{ml: 1}} onClick={type==='inpaint'?edgeGenerate:handleOnClickImgGCNUpload}>
               <AutoModeIcon/>
             </IconButton>
           </Box>}
@@ -451,7 +448,7 @@ const SettingDrawer = ({ open, generateHandler, edgeGenerate, logout,
           value={promptWeight}
           min={1}
           max={30}
-          step={1}
+          step={0.1}
           onChange={(e, newValue) => setPromptWeight(newValue)}
           valueLabelDisplay="auto"
           sx={{color: '#800080'}}

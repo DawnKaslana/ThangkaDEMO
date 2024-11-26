@@ -90,11 +90,12 @@ export function Home() {
   const [selectedImg, setSelectedImg] = useState(undefined);
   const [selectedMask, setSelectedMask] = useState(undefined);
   const [selectedCNImg, setSelectedCNImg] = useState(undefined);
-  const [result, setResult] = useState('');
+  const [selectedImgGCN, setSelectedImgGCN] = useState(undefined);
+  const [CNImgSrc, setCNImgSrc] = useState(null);
   const [outputSrc, setOutputSrc] = useState(null);
 
   // 讀取後端的模型狀態
-  useEffect(() => {
+  const getPipeType = () => {
     django({ url: '/getPipeType/', method: 'get'})
     .then(res => {
       console.log(res.data)
@@ -104,6 +105,10 @@ export function Home() {
       setCNList(res.data.cnList)
     })
     .catch((err)=>setGenerateState(false))
+  }
+
+  useEffect(() => {
+    getPipeType()
   }, []);
 
   useEffect(() => {
@@ -183,6 +188,8 @@ export function Home() {
       generateHandler(args)
     } else if (args.command === 'changeParams') {
       changeParams(args.params)
+    } else if (args.command === 'optimizePrompt') {
+      console.log('optimizePrompt')
     }
   }
 
@@ -199,6 +206,8 @@ export function Home() {
       setErrorMsg("請輸入控制圖像。")
       return
     }
+
+    //if selectedCNImg =  'generated'
 
     let generateFunc
 
@@ -254,12 +263,12 @@ export function Home() {
   const inpaintGenerate = (formData) => {
     django({ url: '/generate/', method: 'post', data: formData })
       .then(res => {
-        setResult(res.data.msg);
         if (res.data.msg === "successed") {
           console.log(selectedImg.name.slice(0, -4) + "_output.png")
           django({
             url: '/getImg/', method: 'get', params: {
-              imageName: selectedImg.name.slice(0, -4) + "_output.png"
+              imageName: selectedImg.name.slice(0, -4) + "_output.png",
+              path:'output'
             }
           }).then(res => {
             setOutputSrc(res.data.img)
@@ -277,12 +286,12 @@ export function Home() {
 
     django({ url: '/generate/', method: 'post', data: formData })
       .then(res => {
-        setResult(res.data.msg);
         if (res.data.msg === "successed") {
           console.log(filename + ".png")
           django({
             url: '/getImg/', method: 'get', params: {
-              imageName: filename + ".png"
+              imageName: filename + ".png",
+              path:'output'
             }
           }).then(res => {
             setOutputSrc(res.data.img)
@@ -297,12 +306,12 @@ export function Home() {
   const img2imgGenerate = (formData) => {
     django({ url: '/generate/', method: 'post', data: formData })
       .then(res => {
-        setResult(res.data.msg);
         if (res.data.msg === "successed") {
           console.log(selectedImg.name.slice(0, -4) + "_output.png")
           django({
             url: '/getImg/', method: 'get', params: {
-              imageName: selectedImg.name.slice(0, -4) + "_output.png"
+              imageName: selectedImg.name.slice(0, -4) + "_output.png",
+              path:'output'
             }
           }).then(res => {
             setOutputSrc(res.data.img)
@@ -314,20 +323,55 @@ export function Home() {
       }).catch((err)=>setGenerateState(false))
   }
 
-  const edgeGenerate = () => {
-    django({ url: '/edgeInpaint/', method: 'post', data: {} })
+  const edgeGenerate = (imgforGCN) => {
+    console.log('IsUploadCN:false')
+    let image
+    if (type !== "inpaint" && imgforGCN) image = imgforGCN
+    else image = selectedImg
+    if (image) {
+      const formData = new FormData();
+      formData.append('image', image);
+      formData.append('mask', selectedMask);
+
+      setGenerateState(true)
+
+      django({ url: '/edgeInpaint/', method: 'post', data: formData })
+        .then(res => {
+          if (res.data.msg === "successed") {
+            console.log(image.name.slice(0, -4) + "_edge.png")
+            django({
+              url: '/getImg/', method: 'get', params: {
+                imageName: image.name.slice(0, -4) + "_edge.png",
+                path: 'edge_output'
+              }
+            }).then(res => {
+              setCNImgSrc("data:image/png;base64," + res.data.img)
+              setSelectedCNImg('generated')
+              setGenerateState(false)
+            })
+          }
+        }).catch((err)=>setGenerateState(false))
+    } else {
+      setInputError(true)
+      setErrorMsg("請輸入原始圖像。")
+    }
+  }
+
+  //when change model or generate type
+  const handleChange = (newType, newModel) => {
+    setModel(newModel)
+    setLoading(true)
+    setSelectedMask(undefined)
+    setSelectedCNImg(undefined)
+    setCNImgSrc(null)
+    const formData = new FormData();
+    formData.append('type', newType);
+    formData.append('model', newModel);
+    django({ url: '/changePipe/', method: 'post', data: formData })
       .then(res => {
-        setResult(res.data.msg);
         if (res.data.msg === "successed") {
-          console.log(selectedImg.name.slice(0, -4) + "edge.png")
-          django({
-            url: '/getImg/', method: 'get', params: {
-              imageName: selectedImg.name.slice(0, -4) + "edge.png"
-            }
-          }).then(res => {
-            setSelectedCNImg(res.data.img)//need preview
-            setGenerateState(false)
-          })
+          getPipeType()
+          setLoading(false)
         }
       }).catch((err)=>setGenerateState(false))
   }
@@ -472,9 +516,9 @@ export function Home() {
         revokeDialogs={revokeDialogs} regenerateDialogs={regenerateDialogs}
         drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}/>
       <SettingDrawer open={drawerOpen}
-        handleNewDialog={handleNewDialog}
         generateHandler={generateHandler}
         edgeGenerate = {edgeGenerate}
+        handleChange = {handleChange}
         prompt={prompt} setPrompt={setPrompt}
         setLabelOpen={setLabelDrawerOpen} setIsNegativeLabel={setIsNegativeLabel}
         negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt} 
@@ -487,11 +531,10 @@ export function Home() {
         noiseRatio={noiseRatio} setNoiseRatio={setNoiseRatio}
         randomSeed={randomSeed} setRandomSeed={setRandomSeed} getRandomSeed={getRandomSeed}
         promptWeight={promptWeight} setPromptWeight={setPromptWeight}
-        loading={loading} setLoading={setLoading}
-        generateState={generateState} setGenerateState={setGenerateState}
-        selectedImg={selectedImg} setSelectedImg={setSelectedImg}
-        selectedMask={selectedMask} setSelectedMask={setSelectedMask}
-        selectedCNImg={selectedCNImg} setSelectedCNImg={setSelectedCNImg}
+        loading={loading} generateState={generateState} 
+        setSelectedImg={setSelectedImg} setSelectedMask={setSelectedMask} setSelectedCNImg={setSelectedCNImg}
+        setSelectedImgGCN={setSelectedImgGCN} 
+        CNImgSrc={CNImgSrc} setCNImgSrc={setCNImgSrc}
         logout={logout}
       />
       <LabelDrawer open={labelDrawerOpen} setLabelOpen={setLabelDrawerOpen} 

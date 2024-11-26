@@ -7,6 +7,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
 import server.models.diffusion as diffusion
 import base64
+from os.path import join, isdir, isfile
 
 
 # 获取csrftoken
@@ -45,10 +46,10 @@ def generate(request):
         imageCount = eval(imageCount)
 
         if type == "inpaint":
-            with open('./server/media/' + imagefile.name, 'wb') as fp:
+            with open(join('./server/media/image', imagefile.name), 'wb') as fp:
                 for chunk in imagefile.chunks():
                     fp.write(chunk)
-            with open('./server/media/' + maskfile.name, 'wb') as fp:
+            with open(join('./server/media/mask', maskfile.name), 'wb') as fp:
                 for chunk in maskfile.chunks():
                     fp.write(chunk)
 
@@ -75,7 +76,7 @@ def generate(request):
 
         if type == "img2img":
             print(prompt, steps, imagefile.name)
-            with open('./server/media/' + imagefile.name, 'wb') as fp:
+            with open(join('./server/media/image', imagefile.name), 'wb') as fp:
                 for chunk in imagefile.chunks():
                     fp.write(chunk)
 
@@ -92,14 +93,25 @@ def generate(request):
 
 def generate_edge(request):
     if request.method == 'POST':
-        diffusion.edge_inpaint()
-        return JsonResponse({'msg': "successed"})
+        imagefile = request.FILES.get("image")
+        maskfile = request.FILES.get("mask")
+        with open(join('./server/media/image', imagefile.name), 'wb') as fp:
+            for chunk in imagefile.chunks():
+                fp.write(chunk)
+        if maskfile:
+            with open(join('./server/media/mask', maskfile.name), 'wb') as fp:
+                for chunk in maskfile.chunks():
+                    fp.write(chunk)
+        if diffusion.edge_inpaint(imagefile.name, maskfile.name if maskfile else None) == 0:
+            return JsonResponse({'msg': "successed"})
 
 def send_img(request):
     if request.method == 'GET':
-        imageName = request.GET.get("imageName")
+        filename = request.GET.get("imageName")
+        path = request.GET.get("path")
         result={}
-        with open("./server/media/output/"+imageName, 'rb') as f:
+        filepath = join('./server/media/', path)
+        with open(join(filepath, filename), 'rb') as f:
             data = f.read()
             result["img"] = bytes.decode(base64.b64encode(data))
             return JsonResponse(result)

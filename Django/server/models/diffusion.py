@@ -9,15 +9,21 @@ from diffusers import StableDiffusionPipeline, DDIMScheduler, \
 import torch
 import time
 import numpy as np
+from skimage.feature import canny
 from PIL import Image, ImageChops, ImageOps, ImageFilter
+
 from . import images
+
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+torch.cuda.set_device('cuda:0')
+print(torch.cuda.device_count(), torch.cuda.is_available())
 
 '''
 export TRANSFORMERS_CACHE=/media/brl2022-1/brl2022-1-1/xty/huggingface/hub/
 export HF_HOME=/media/brl2022-1/brl2022-1-1/xty/huggingface/
 export HUGGINGFACE_HUB_CACHE=/media/brl2022-1/brl2022-1-1/xty/huggingface/hub/
 '''
-torch.cuda.set_device(0)
+
 
 """
 presetting
@@ -28,14 +34,21 @@ cn_model_path = "/mnt/Workspace/SDmodels/CN"
 lora_model_path = "/mnt/Workspace/SDmodels/Lora/"
 edge_model_path = "/mnt/Workspace/SDmodels/edge/"
 filePath = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media"
+image_path = join(filePath, "image")
+mask_path = join(filePath, "mask")
+edge_path = join(filePath, "edge")
 edge_output_path = join(filePath, "edge_output")
 output_path = join(filePath, "output")
 
-if not isdir(output_path):
+if not isdir(image_path):
+    mkdir(image_path)
+    mkdir(mask_path)
+    mkdir(edge_path)
+    mkdir(edge_output_path)
     mkdir(output_path)
 
 typeSet = "text2img" #inpaint text2img img2img
-modelSet = "SD21" #SDI2 SD21
+modelSet = "SD21" #inpaint:[CNI SDI2] other:[SD21 SD15]
 
 """
 model list (what type can use)
@@ -52,8 +65,9 @@ def loadModel(generateType, model):
     typeSet = generateType
     modelSet = model
 
-def changeModel(generateType, model):
-    # torch.cuda.empty_cache()
+def changeModel(generateType, model, ft=False):
+    if not ft:torch.cuda.empty_cache()
+
     global pipe
     global typeSet
     global modelSet
@@ -103,8 +117,8 @@ def changeModel(generateType, model):
 
 
 # load pipe first time
-pipe = changeModel(typeSet, modelSet)
-pipe.to("cuda")
+# pipe = changeModel(typeSet, modelSet, True)
+# pipe.to("cuda")
 
 
 def getModelType():
@@ -145,22 +159,32 @@ def make_inpaint_condition(image, image_mask):
     return image
 
 """
-edge
+generate edge
 """
-def edge_inpaint():
-    #必須有原圖 只有原圖tocanny 沒給mask不用跑edge修復
-    filename = "6.4_a_1024x1024-1_img.png"
-    maskname = "6.4_a_1024x1024-1_mask.png"
-    py_dir = join(edge_connect_dir, 'test.py')
-    checkpoints = join(edge_model_path,'thangka_AC') #thangkaAC_1
-    input = join(filePath, filename)
-    mask = join(filePath, maskname)
-    command = "python3 %s --model 1 --checkpoints %s --input %s --mask %s --output %s"\
-              % (py_dir, checkpoints, input, mask, edge_output_path)
-    command = command.split(" ")
 
-    res = subprocess.run(command, check=True, timeout=30)
-    print(res)
+def edge_inpaint(filename, maskname=None):
+    #只有原圖tocanny 沒給mask不用跑edge修復
+    torch.cuda.set_device(1)
+    print(filename, maskname)
+    if maskname:
+        py_dir = join(edge_connect_dir, 'test.py')
+        checkpoints = join(edge_model_path,'thangkaAC_1') #thangkaAC_1
+        image = join(image_path, filename)
+        mask = join(mask_path, maskname)
+
+        command = "python3 %s --model 1 --checkpoints %s --input %s --mask %s --output %s"\
+                  % (py_dir, checkpoints, image, mask, edge_output_path)
+        command = command.split()
+
+        res = subprocess.run(command, timeout=30, check=True)
+
+        return res.returncode
+    else:
+        image = Image.open(join(image_path, filename)).resize((512,512)).convert('L')
+        edge = canny(np.array(image), sigma=1)
+        edge = Image.fromarray(edge)
+        edge.save(join(edge_output_path, filename[:-4]+'_edge.png'))
+        return 0
 
 
 """
@@ -178,9 +202,9 @@ def inpaint(fileName, maskName, prompt, nagative_prompt,
         pipe.unload_lora_weights()
 
     # process image & mask  &  image_masked
-    image = Image.open(join(filePath, fileName)).convert("RGBA").resize((512,512))
+    image = Image.open(join(image_path, fileName)).convert("RGBA").resize((512,512))
     image_flat = images.flatten(image, "#ffffff")
-    mask_image = Image.open(join(filePath, maskName)).resize((512,512))
+    mask_image = Image.open(join(mask_path, maskName)).resize((512,512))
     bin_mask = images.create_binary_mask(mask_image)
     image_fill = images.fill(image_flat, bin_mask) #通過模糊填充周圍顏色
     np_mask = np.array(bin_mask)
@@ -273,7 +297,7 @@ def img2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, i
     else:
         pipe.unload_lora_weights()
 
-    init_image = Image.open(join(filePath, filename)).resize((512, 512))
+    init_image = Image.open(join(image_path, filename)).resize((512, 512))
 
     output = pipe(
         prompt=prompt,
