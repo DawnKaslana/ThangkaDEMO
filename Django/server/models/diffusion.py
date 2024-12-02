@@ -53,16 +53,16 @@ if not isdir(image_path):
 """
 model list (what type can use)
 """
-inpaintList = ["SD15", "SD21", "SDI2", "CNI"]
-SDList = ["SD15", "SD21"]
+inpaintList = ["CNI", "SDI2", "SD21", "SD15"]
+SDList = ["SD21", "SD15"]
 SDVersion = {'SD15':'sd15', 'SD21':'sd21', 'SDI2': 'sd21', 'CNI': 'sd15'}
 
-def loadModel(generateType, model, CNModel):
+def loadModel(generateType, model, cnModel):
     global pipe
-    pipe = changeModel(generateType, model, CNModel)
+    pipe = changeModel(generateType, model, cnModel)
     pipe.to("cuda")
 
-def changeModel(generateType, model, CNModel=None,ft=False):
+def changeModel(generateType, model, cnModel=None,ft=False):
     if not ft:
         global pipe
         del pipe
@@ -70,23 +70,34 @@ def changeModel(generateType, model, CNModel=None,ft=False):
         torch.cuda.empty_cache()
     global typeSet
     global modelSet
-    global CNModelSet
+    global cnModelSet
     typeSet = generateType
     modelSet = model
-    CNModelSet = CNModel
+    cnModelSet = cnModel
+
+    # reset available model
+    if generateType == "inpaint":
+        if model not in inpaintList:
+            modelSet = model = inpaintList[0]
+    else:
+        if model not in SDList:
+            modelSet = model = SDList[0]
+    if str(cnModel) != "None":
+        if cnModel.split('_')[1] != SDVersion[modelSet]:
+            cnModelSet = cnModel = "None"
 
     if generateType == "inpaint":
         if model == "CNI":
             premodel_abspath = join(sd_model_path, "SD15")
-            CNI_abspath = join(cn_model_path, "control_v11p_sd15_inpaint")
+            CNI_abspath = join(cn_model_path, "control_sd15_inpaint")
             CNI_controlnet = ControlNetModel.from_pretrained(
                 CNI_abspath,
                 torch_dtype=torch.float16,
                 use_safetensors=True,
             )
             controlnet = CNI_controlnet
-            if str(CNModel) != 'None':
-                cnmodel_abspath = join(cn_model_path, CNModel)
+            if str(cnModel) != 'None':
+                cnmodel_abspath = join(cn_model_path, cnModel)
                 controlnet_extra = ControlNetModel.from_pretrained(
                     cnmodel_abspath,
                     torch_dtype=torch.float16,
@@ -107,8 +118,8 @@ def changeModel(generateType, model, CNModel=None,ft=False):
             pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
         else: #SDI2
             premodel_abspath = join(sd_model_path, model)
-            if str(CNModel) != 'None':
-                cnmodel_abspath = join(cn_model_path, CNModel)
+            if str(cnModel) != 'None':
+                cnmodel_abspath = join(cn_model_path, cnModel)
                 controlnet = ControlNetModel.from_pretrained(
                     cnmodel_abspath,
                     torch_dtype=torch.float16,
@@ -127,10 +138,8 @@ def changeModel(generateType, model, CNModel=None,ft=False):
 
     if generateType == "text2img":
         premodel_abspath = join(sd_model_path, model)
-        if model not in SDList:
-            model == "SD21"
-        if str(CNModel) != 'None':
-            cnmodel_abspath = join(cn_model_path, CNModel)
+        if str(cnModel) != 'None' and cnModel.split('_')[1] == SDVersion[modelSet]:
+            cnmodel_abspath = join(cn_model_path, cnModel)
             controlnet = ControlNetModel.from_pretrained(
                 cnmodel_abspath,
                 torch_dtype=torch.float16,
@@ -151,8 +160,8 @@ def changeModel(generateType, model, CNModel=None,ft=False):
         premodel_abspath = join(sd_model_path, model)
         if model not in SDList:
             model == "SD21"
-        if str(CNModel) != 'None':
-            cnmodel_abspath = join(cn_model_path, CNModel)
+        if str(cnModel) != 'None':
+            cnmodel_abspath = join(cn_model_path, cnModel)
             controlnet = ControlNetModel.from_pretrained(
                 cnmodel_abspath,
                 torch_dtype=torch.float16,
@@ -177,16 +186,16 @@ def changeModel(generateType, model, CNModel=None,ft=False):
 presetting(loading) type & model
 """
 typeSet = "inpaint" #inpaint text2img img2img
-modelSet = "SDI2" #inpaint:[CNI SDI2] other:[SD21 SD15]
-CNModelSet = "control_v11p_sd21_canny" #None control_v11p_sd21_canny control_v11p_sd15_canny
+modelSet = "SDI2" #inpaint:[CNI SDI2 SD21 SD15]
+cnModelSet = "None" #None control_sd21_canny control_sd15_canny
 
 # load pipe first time
-pipe = changeModel(typeSet, modelSet, CNModelSet, ft=True)
+pipe = changeModel(typeSet, modelSet, cnModelSet, ft=True)
 pipe.to("cuda")
 
 
 def getModelType():
-    result = {'model':modelSet, 'type':typeSet, 'CNModel':CNModelSet, 'loraList':[], 'cnList':[]}
+    result = {'model':modelSet, 'type':typeSet, 'cnModel':cnModelSet, 'loraList':[], 'cnList':[]}
     # 模型列表改成翻文件夾
     if modelSet == "SD21" or modelSet == "SDI2":
         loraList = listdir(lora_model_path)
@@ -198,9 +207,10 @@ def getModelType():
     cnList = listdir(cn_model_path)
     for item in cnList:
         if isdir(join(cn_model_path, item)):
-            version = item.split('_')[2]
-            cnType = item.split('_')[3]
-            if cnType != 'inpaint' and SDVersion[modelSet] == version:
+            version = item.split('_')[1]
+            cnType = item.split('_')[2]
+            # 目前只提供canny
+            if cnType == 'canny' and SDVersion[modelSet] == version:
                 result['cnList'].append(item)
 
     return result

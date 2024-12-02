@@ -1,16 +1,114 @@
 <style>
-.infoBlock {
-  border: 1px solid #800080 !important;
-  background-color: lightblue;
-  color: purple;
-}
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f7fc;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5em;
+      color: #5f4b8b;
+      margin-bottom: 20px;
+    }
+
+    h2, h3, h4 {
+      color: #4c4c4c;
+      margin-top: 20px;
+      font-weight: normal;
+    }
+
+    h3 {
+      margin-top: 10px;
+    }
+
+    h4 {
+      font-size: 1.1em;
+      margin-top: 10px;
+    }
+
+    /* 信息块样式 */
+    .infoBlock {
+      border: 2px solid #800080;
+      background-color: #e0f7fa;
+      color: #800080;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    /* 标记（熒光筆）样式 */
+    mark {
+      background-color: yellow;
+      color: red;
+      font-weight: bold;
+    }
+
+    /* 详情样式 */
+    details {
+      background-color: #fafafa;
+      padding: 10px;
+      margin-top: 15px;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    details summary {
+      font-size: 1.1em;
+      cursor: pointer;
+      font-weight: bold;
+      color: #4b8dff;
+    }
+
+    /* 列表样式 */
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    li {
+      padding: 5px 0;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .model-list li {
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .model-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #800080;
+      font-size: 1.2em;
+    }
+
+    /* 响应式样式 */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.8em;
+      }
+
+      .container {
+        padding: 10px;
+      }
+    }
 </style>
 
 
-<mark>熒光筆</mark>
-
-<div class="infoBlock">infoBlock</div>
-
+<span class="infoBlock">
+  <mark>提示：选择合适的生成模型进行图像生成、修复或编辑。</mark>
+</span>
 
 ### 选择模型
   选择合适的生成模型来进行图像生成、修复或编辑操作。每个模型有不同的功能和支持的操作类型。

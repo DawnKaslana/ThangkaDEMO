@@ -102,7 +102,7 @@ export function Home() {
       console.log(res.data)
       setType(res.data.type) 
       setModel(res.data.model)
-      setCNModel(res.data.CNModel?res.data.CNModel:'None')
+      setCNModel(res.data.cnModel?res.data.cnModel:'None')
       setLoraList(res.data.loraList)
       setCNList(res.data.cnList)
     })
@@ -400,7 +400,7 @@ export function Home() {
     const formData = new FormData();
     formData.append('type', newType);
     formData.append('model', newModel);
-    if (newCNModel !== 'None') formData.append('CNModel', newCNModel);
+    formData.append('cnModel', newCNModel);
     django({ url: '/changePipe/', method: 'post', data: formData })
       .then(res => {
         if (res.data.msg === "successed") {

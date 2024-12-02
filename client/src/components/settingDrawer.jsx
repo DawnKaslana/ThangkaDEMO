@@ -73,11 +73,9 @@ import { server, django, file_url } from '../api.js'
 const modelList = [
   { value: "SDI2", label: "Stable Diffusion Inpaint 2", type: ["inpaint"] },
   { value: "CNI", label: "ControlNet Inpaint", type: ["inpaint"] },
-  { value: "SD21", label: "Stable Diffusion 2.1", type: ["text2img", "img2img"] },
-  { value: "SD15", label: "Stable Diffusion 1.5", type: ["text2img", "img2img"] },
+  { value: "SD21", label: "Stable Diffusion 2.1", type: ["inpaint", "text2img", "img2img"] },
+  { value: "SD15", label: "Stable Diffusion 1.5", type: ["inpaint", "text2img", "img2img"] },
 ]
-const inpaintList = ["SDI2", "CNI"]
-const SDList = ["SD15", "SD21"]
 
 const languages = [{title:'中文',value:'chs'},{title:'English',value:'eng'}]
 
@@ -199,29 +197,28 @@ const SettingDrawer = ({ open,
 
   const handleChangeType = (e, typeValue) => {
     if (typeValue !== type){
+      if (typeValue!=='inpaint') clearImg("mask")
+      clearImg("cn")
       setType(typeValue);
-      let newModel = model
-      if (typeValue == "inpaint" && !inpaintList.includes(model)){
-        newModel = 'SDI2'
-      } else if (typeValue != "inpaint" && inpaintList.includes(model)){
-        newModel = 'SD21'
-      }
-      
-      handleChange(typeValue, newModel)
+      handleChange(typeValue, model, CNModel)
     }
   };
 
   const handleChangeModel = (modelValue) => {
     if (modelValue !== model){
+      clearImg("cn")
       setModel(modelValue)
-      handleChange(type, modelValue)
+      handleChange(type, modelValue, CNModel)
     }
   }
 
   const handleChangeLora = (value) =>  setLoraModel(value)
   const handleChangeCN = (value) =>  {
-    setCNModel(value)
-    handleChange(type, model, value)
+    if (value !== CNModel){
+      clearImg("cn")
+      setCNModel(value)
+      handleChange(type, model, value)
+    }
   }
 
   const handleChangeSteps = (value) =>{

@@ -132,11 +132,11 @@ def changePipe(request):
     if request.method == 'POST':
         generateType = request.POST.get("type")
         model = request.POST.get("model")
-        CNModel = request.POST.get("CNModel")
+        cnModel = request.POST.get("cnModel")
         print('generateType: '+str(generateType))
         print('model: ' + str(model))
-        print('CNModel: ' + str(CNModel))
-        diffusion.loadModel(generateType, model, CNModel)
+        print('cnModel: ' + str(cnModel))
+        diffusion.loadModel(generateType, model, cnModel)
         return JsonResponse({'msg': "successed"})
 
 # def changeLora(request):
