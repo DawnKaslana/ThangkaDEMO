@@ -21,6 +21,7 @@ import { darkTheme } from '../css/theme.jsx';
 
 //other func & components
 import RViewerJS from 'viewerjs-react'
+import ReactMarkdown from 'react-markdown'
 import defaultImage from '../images/defaultImage.jpeg'
 import NavBar from '../components/navBar.jsx';
 import SettingDrawer from '../components/settingDrawer.jsx';
@@ -30,7 +31,7 @@ import loadImg from '../images/purpleLoader-crop.gif'
 
 //api
 import { server, django, file_url } from '../api.js'
-import ReactMarkdown from 'react-markdown'
+
 
 // cookie
 const cookies = new Cookies();
@@ -101,6 +102,7 @@ export function Home() {
       console.log(res.data)
       setType(res.data.type) 
       setModel(res.data.model)
+      setCNModel(res.data.CNModel?res.data.CNModel:'None')
       setLoraList(res.data.loraList)
       setCNList(res.data.cnList)
     })
@@ -189,7 +191,7 @@ export function Home() {
     } else if (args.command === 'changeParams') {
       changeParams(args.params)
     } else if (args.command === 'optimizePrompt') {
-      console.log('optimizePrompt')
+      optimizePrompt()
     }
   }
 
@@ -199,6 +201,31 @@ export function Home() {
     if (params.noiseRatio) setNoiseRatio(params.noiseRatio)
   }
 
+  const optimizePrompt = (isClick) => {
+    console.log(isClick)
+    if (prompt) {
+      setGenerateState(true)
+      const formData = new FormData();
+      formData.append('text', prompt);
+      django({ url: '/refine/', method: 'post', data: formData })
+      .then(res=>{
+        if (!isClick){
+          handleMessages(res.data)
+        } else {
+          setPrompt(res.data.params.prompt)
+        }
+          setGenerateState(false)
+      })
+    } else {
+      if (!isClick){
+        handleMessages({
+          "role": "assistant",
+          "content": "請輸入prompt。",
+        })
+      }
+    }
+  }
+
   const generateHandler = (args) => {
     if (args.prompt) setPrompt(args.prompt)
     if (CNModel !== 'None' && !selectedCNImg){
@@ -206,8 +233,6 @@ export function Home() {
       setErrorMsg("請輸入控制圖像。")
       return
     }
-
-    //if selectedCNImg =  'generated'
 
     let generateFunc
 
@@ -243,7 +268,14 @@ export function Home() {
     formData.append('negativePrompt', negativePrompt);
     formData.append('image', selectedImg);
     formData.append('mask', selectedMask);
-    formData.append('CNImg', selectedCNImg);
+
+    //if selectedCNImg = 'generated' 就不用送邊緣圖，送檔名，讓D直接讀edgedir
+    if (selectedCNImg?.generated) {
+      formData.append('isGCN', true);
+      formData.append('CNImage', selectedCNImg.generated);
+    } else {
+      formData.append('CNImage', selectedCNImg);
+    }
     formData.append('steps', steps);
     formData.append('seed', randomSeed<0?getRandomSeed():randomSeed);
     formData.append('strength', noiseRatio);
@@ -338,15 +370,16 @@ export function Home() {
       django({ url: '/edgeInpaint/', method: 'post', data: formData })
         .then(res => {
           if (res.data.msg === "successed") {
-            console.log(image.name.slice(0, -4) + "_edge.png")
+            let filename = image.name.slice(0, -4) + "_edge.png"
+            console.log(filename)
             django({
               url: '/getImg/', method: 'get', params: {
-                imageName: image.name.slice(0, -4) + "_edge.png",
-                path: 'edge_output'
+                imageName: filename,
+                path: 'edge'
               }
             }).then(res => {
               setCNImgSrc("data:image/png;base64," + res.data.img)
-              setSelectedCNImg('generated')
+              setSelectedCNImg({'generated':filename})
               setGenerateState(false)
             })
           }
@@ -358,15 +391,16 @@ export function Home() {
   }
 
   //when change model or generate type
-  const handleChange = (newType, newModel) => {
+  const handleChange = (newType, newModel, newCNModel) => {
     setModel(newModel)
     setLoading(true)
-    setSelectedMask(undefined)
+    if (newType!=='inpaint') setSelectedMask(undefined)
     setSelectedCNImg(undefined)
     setCNImgSrc(null)
     const formData = new FormData();
     formData.append('type', newType);
     formData.append('model', newModel);
+    if (newCNModel !== 'None') formData.append('CNModel', newCNModel);
     django({ url: '/changePipe/', method: 'post', data: formData })
       .then(res => {
         if (res.data.msg === "successed") {
@@ -519,6 +553,7 @@ export function Home() {
         generateHandler={generateHandler}
         edgeGenerate = {edgeGenerate}
         handleChange = {handleChange}
+        optimizePrompt = {optimizePrompt}
         prompt={prompt} setPrompt={setPrompt}
         setLabelOpen={setLabelDrawerOpen} setIsNegativeLabel={setIsNegativeLabel}
         negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt} 
@@ -535,6 +570,7 @@ export function Home() {
         setSelectedImg={setSelectedImg} setSelectedMask={setSelectedMask} setSelectedCNImg={setSelectedCNImg}
         setSelectedImgGCN={setSelectedImgGCN} 
         CNImgSrc={CNImgSrc} setCNImgSrc={setCNImgSrc}
+        setErrorMsg={setErrorMsg} setInputError={setInputError}
         logout={logout}
       />
       <LabelDrawer open={labelDrawerOpen} setLabelOpen={setLabelDrawerOpen} 

@@ -84,6 +84,9 @@ const useStyles = makeStyles((theme) => ({
         marginTop: '1em',
       } 
     },
+    helpMarkDown: {
+      fontSize: '1.1em',
+    },
     cancelButton: {
       backgroundColor: '#f7f7f8 !important',
       color: '#800080 !important', //800080

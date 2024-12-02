@@ -108,20 +108,19 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
   }, [open]);
 
   useEffect(() => {
-    server({ url: '/getLabelList', params:{user_id: userId} })
-    .then((res) => {
-      setLabelList(res.data);
-    }).catch(error => console.error('Error fetching label list:', error));
-  }, [renderLabel]);
-
-  useEffect(() => {
     server({ url: '/getClassList', params:{negative:isNegativeLabel, user_id: userId} })
     .then((res) => {
       setClassList(res.data);
       setClassTab(openFunc==='add'?res.data.at(-1).id:res.data[0].id)
     }).catch(error => console.error('Error fetching class list:', error));
   }, [renderClass]);
-  
+
+  useEffect(() => {
+    server({ url: '/getLabelList', params:{user_id: userId} })
+    .then((res) => {
+      setLabelList(res.data);
+    }).catch(error => console.error('Error fetching label list:', error));
+  }, [renderLabel]);
 
   const handleChange = (event, newValue) => {
     setClassTab(newValue);
@@ -279,7 +278,7 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
               filteredLabels?.map((label, idx) => (
                 <Grid item xs={12} sm={6} md={3} lg={2} xl={1} xxl={1} key={idx}>
                   <Paper className={styles.paper} onClick={()=>showEdit&&label.user_id?handleCellFunc('label','edit',label):handleCellClick(label.value)} >
-                      <Box sx={{margin:'0 auto'}}>{label.value}</Box>
+                      <Box sx={{margin:'0 auto', maxWidth:'100%', wordWrap: 'break-word', textWrap: 'wrap'}}>{label.value}</Box>
                       {showEdit && label.user_id? 
                         <EditIcon sx={{fontSize:20,verticalAlign:'middle',position:'absolute'}}/>
                       :null}

@@ -167,7 +167,7 @@ def generateImgByErnie(prompt):
 def refineByErnie(text):
     messages = [{
         "role": "user",
-        "content": "從'" + text + "'中擷取關於圖像的描述並進行優化，使生成效果更好，只輸出優化後的圖像描述內容（不要太長）"
+        "content": "從'" + text + "'中擷取關於圖像的描述並進行優化，使生成效果更好，只輸出優化後的圖像描述文本（不要太長）"
     }]
 
     response = erniebot.ChatCompletion.create(
@@ -196,18 +196,6 @@ def translateByErnie(text, lang='eng', generate=False):
     return response.get_result()
 
 
-def optimizePrompt(prompt):
-    print("original prompt:"+prompt)
-    if prompt:
-        prompt = refineByErnie(prompt)
-
-    return JsonResponse({
-        "role": "assistant",
-        "params": {prompt},
-        "command": "changeParams",
-        "content": "已將prompt優化為："+prompt,
-    })
-
 def send_command(command):
     return JsonResponse({
         "command": command,
@@ -220,6 +208,21 @@ def translate(request):
         lang = request.POST.get("lang")
 
         return JsonResponse({"text": translateByErnie(text, lang)})
+
+def optimize(request):
+    if request.method == 'POST':
+        print(request.POST)
+        text = request.POST.get("text")
+        if text:
+            print("original prompt:" + text)
+            text = refineByErnie(text)
+
+        return JsonResponse({
+            "role": "assistant",
+            "params": {'prompt':text},
+            "command": "changeParams",
+            "content": "已將prompt優化為："+text,
+        })
 
 def text2img(prompt):
     print('text2img prompt:'+prompt)

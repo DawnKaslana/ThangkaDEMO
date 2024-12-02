@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
 //file
 const { putFile, getFile }  = require('./models/file');
 app.post('/uploadFile', (req, res) => putFile(req, res));
-app.get('/getVideo', (req, res) => getFile(req, res));
+app.get('/getFile', (req, res) => getFile(req, res));
 
 //user
 const { getUserList, addUser, putUser, deleteUser }  = require('./models/user');

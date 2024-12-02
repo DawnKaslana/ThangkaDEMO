@@ -40,26 +40,12 @@ import Tooltip from '@mui/material/Tooltip';
 
 
 //Icon import
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AddIcon from '@mui/icons-material/Add';
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
-import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import AutoModeIcon from '@mui/icons-material/AutoMode';
-import InboxIcon from '@mui/icons-material/MoveToInbox';
-import MailIcon from '@mui/icons-material/Mail';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import HelpIcon from '@mui/icons-material/Help';
-import UploadIcon from '@mui/icons-material/Upload';
-import SendIcon from '@mui/icons-material/Send';
-import ImageIcon from '@mui/icons-material/Image';
-import HideImageIcon from '@mui/icons-material/HideImage';
-import MenuIcon from '@mui/icons-material/Menu';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import SaveIcon from '@mui/icons-material/Save';
 import ClearIcon from '@mui/icons-material/Clear';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import FontDownloadIcon from '@mui/icons-material/FontDownload';
@@ -67,14 +53,16 @@ import CollectionsIcon from '@mui/icons-material/Collections';
 import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
-import TranslateIcon from '@mui/icons-material/Translate';
 import GTranslateIcon from '@mui/icons-material/GTranslate';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 
 // other func
 import RViewerJS from 'viewerjs-react'
 import LinearWithValueLabelProgress from './progress.jsx'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from "rehype-raw";
+
 
 // CSS
 import useStyles from '../css/style';
@@ -84,7 +72,7 @@ import { server, django, file_url } from '../api.js'
 
 const modelList = [
   { value: "SDI2", label: "Stable Diffusion Inpaint 2", type: ["inpaint"] },
-  { value: "CNI", label: "ControlNet Inpaint 2", type: ["inpaint"] },
+  { value: "CNI", label: "ControlNet Inpaint", type: ["inpaint"] },
   { value: "SD21", label: "Stable Diffusion 2.1", type: ["text2img", "img2img"] },
   { value: "SD15", label: "Stable Diffusion 1.5", type: ["text2img", "img2img"] },
 ]
@@ -115,7 +103,7 @@ const listTheme = createTheme({
 
 
 const SettingDrawer = ({ open, 
-  generateHandler, edgeGenerate, handleChange, 
+  generateHandler, edgeGenerate, handleChange, optimizePrompt,
   prompt, setPrompt, setLabelOpen, setIsNegativeLabel,
   negativePrompt, setNegativePrompt,
   type, setType,
@@ -131,6 +119,7 @@ const SettingDrawer = ({ open,
   noiseRatio, setNoiseRatio,
   randomSeed, setRandomSeed, getRandomSeed,
   promptWeight, setPromptWeight,
+  setErrorMsg, setInputError,
   logout,
 }) => {
   const theme = useTheme();
@@ -147,12 +136,21 @@ const SettingDrawer = ({ open,
 
   // control Help Dialog
   const [helpOpen, setHelpOpen] = useState(false)
+  const [helpContent, setHelpContent] = useState('')
 
   const handleOnClickImgUpload = () => { inputImgRef.current.click(); };
   const handleOnClickMaskUpload = () => { inputMaskRef.current.click(); };
   const handleOnClickCNUpload = () => { inputCNRef.current.click(); };
   const handleOnClickImgGCNUpload = () => { inputImgforGCNRef.current.click(); };
   const selectImgHandler = (event, type) => {
+    let filename = event.target.files[0].name
+    let ext = filename.substring(filename.lastIndexOf('.'));
+    if (ext !== '.png' && ext !== '.jpg' && ext !== '.jpeg'){
+      setInputError(true)
+      setErrorMsg('請輸入png或jpg檔案。')
+      return
+    }
+
     if (type === "img") {
       setSelectedImg(event.target.files[0]);
     } else if (type === "mask") {
@@ -221,7 +219,10 @@ const SettingDrawer = ({ open,
   }
 
   const handleChangeLora = (value) =>  setLoraModel(value)
-  const handleChangeCN = (value) =>   setCNModel(value)
+  const handleChangeCN = (value) =>  {
+    setCNModel(value)
+    handleChange(type, model, value)
+  }
 
   const handleChangeSteps = (value) =>{
     //設置上限
@@ -460,14 +461,21 @@ const SettingDrawer = ({ open,
           <Typography variant="h6" gutterBottom >Prompt</Typography>
           {/* 翻譯按鈕 */}
           <IconButton sx={{p:0,ml:1}} edge="start" color="inherit"
+            disabled={generateState}
             onClick={(e)=>handleTranslateClick(e, 0)}>
             <GTranslateIcon />
+          </IconButton>
+          {/* 優化按鈕 */}
+          <IconButton sx={{p:0,ml:1}} edge="start" color="inherit"
+            disabled={generateState}
+            onClick={()=>optimizePrompt(true)}>
+            <AutoFixHighIcon />
           </IconButton>
           <Box sx={{flexGrow:1}}/>
           {/* 打開Prompt label標籤欄 */}
           <Tooltip title={<h4>Prompt label</h4>} placement="top" arrow>
           <IconButton sx={{p:0}} edge="start" color="inherit"
-          onClick={()=>{setLabelOpen(true);setIsNegativeLabel(0)}} >
+            onClick={()=>{setLabelOpen(true);setIsNegativeLabel(0)}} >
               <CollectionsBookmarkIcon />
           </IconButton>
           </Tooltip>
@@ -483,6 +491,7 @@ const SettingDrawer = ({ open,
           <Typography variant="h6" gutterBottom>Negative Prompt</Typography>
           {/* 翻譯按鈕 */}
           <IconButton sx={{p:0,ml:1}} edge="start" color="inherit"
+            disabled={generateState}
             onClick={(e)=>handleTranslateClick(e, 1)}>
             <GTranslateIcon />
           </IconButton>
@@ -510,11 +519,13 @@ const SettingDrawer = ({ open,
   const HelpDialog = () => (
     <Dialog
     onClose={()=>setHelpOpen(false)}
-    aria-labelledby="customized-dialog-title"
+    aria-labelledby="help-dialog-title"
     open={helpOpen}
+    maxWidth='md'
+    fullWidth
     >
-      <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
-        Help Document
+      <DialogTitle sx={{ m: 0, p: 2, fontSize:'2em' }} id="customized-dialog-title">
+        使用说明
       </DialogTitle>
       <IconButton
         aria-label="close"
@@ -529,19 +540,15 @@ const SettingDrawer = ({ open,
         <CloseIcon />
       </IconButton>
       <DialogContent dividers>
-        <Typography gutterBottom>
-        a thangka of Sitting Avalokiteshvara,four-armd, best quality ,masterpiece, Exquisite painting
-        </Typography>
-        <Typography gutterBottom>
-        a thangka of knowledge wheel,gold wheel in exquisite patterned drop shape,on a dark pink utpala flower with cloud-shaped petals around bushy jagged dark green leaves,above is a part of classic Lotus Terrace,leftside is green leave,behind is blue sea with waves,Exquisite painting,MianTang style,dim colors,
-        </Typography>
-        <Typography gutterBottom>
-        Ekadasamukha head, consists of white and green and red faces, bright colors, wear golden Tiara, top is a small red Buddha head with black hair, exquisite Mandorla, MianTang style, Thousand-armed, background is clouds on gray blue sky
-        </Typography>
+      <ReactMarkdown
+        className={classes.helpMarkDown}
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}>
+          {helpContent}
+      </ReactMarkdown>
       </DialogContent>
     </Dialog>
   )
-
 
   const [anchorEl, setAnchorEl] = useState(null);
   const [languageNMenu, setLanguageNMenu] = useState(0);
@@ -566,6 +573,12 @@ const SettingDrawer = ({ open,
     }
     handleTranslateClose()
   }
+
+  useEffect(() => {
+    server({url:'/getFile', params:{filename:'help.md'}}).then((res) => {
+      setHelpContent(res.data)
+    })
+  }, []);
 
 
   return (

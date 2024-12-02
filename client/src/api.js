@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-const serverURL = 'http://localhost:3001'; //121.40.100.199:12538 | http://localhost:3001
-const pythonURL = 'http://localhost:4000'; //121.40.100.199:12539 | http://localhost:4000
+const serverURL = 'http://localhost:3001'; //http://121.40.100.199:12538 | localhost:3001
+const pythonURL = 'http://localhost:4000'; //http://121.40.100.199:12539 | localhost:4000
 
 export const fileURL = new URL('/getFile?filename=', serverURL).href
 

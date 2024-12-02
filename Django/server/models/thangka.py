@@ -9,7 +9,6 @@ import server.models.diffusion as diffusion
 import base64
 from os.path import join, isdir, isfile
 
-
 # 获取csrftoken
 @ensure_csrf_cookie
 def getToken(request):
@@ -25,6 +24,8 @@ def generate(request):
     if request.method == 'POST':
         imagefile = request.FILES.get("image")
         maskfile = request.FILES.get("mask")
+        isGCN = request.POST.get("isGCN")
+        CNImagefile = request.POST.get("CNImage") if isGCN else request.FILES.get("CNImage")
         prompt = request.POST.get("prompt")
         negativePrompt = request.POST.get("negativePrompt")
         steps = request.POST.get("steps")
@@ -37,6 +38,7 @@ def generate(request):
         loraModel = request.POST.get("loraModelName")
         filename = request.POST.get("filename")
 
+        # setting params
         if not prompt: prompt = ""
         if not negativePrompt: negativePrompt = ""
         steps = int(steps) if eval(steps) else 30
@@ -44,6 +46,17 @@ def generate(request):
         strength = eval(strength)
         guidance = eval(guidance)
         imageCount = eval(imageCount)
+        if isGCN:
+            CNImgName = CNImagefile
+        elif CNImagefile:
+            with open(join('./server/media/edge', CNImagefile.name), 'wb') as fp:
+                for chunk in CNImagefile.chunks():
+                    fp.write(chunk)
+            CNImgName = CNImagefile.name
+        else:
+            CNImgName = None
+
+        diffusion.load_lora(loraModel)
 
         if type == "inpaint":
             with open(join('./server/media/image', imagefile.name), 'wb') as fp:
@@ -60,22 +73,20 @@ def generate(request):
                               strength=strength, guidance=guidance,
                               imageCount=imageCount,
                               SDModel=SDModel,
-                              loraModel=loraModel)
+                              CNImgName=CNImgName)
             return JsonResponse({'msg': "successed"})
 
         if type == "text2img":
-            print(prompt, steps, filename)
             diffusion.text2img(prompt=prompt,
                                negativePrompt=negativePrompt,
                                steps=steps, seed=seed,
                                strength=strength, guidance=guidance,
                                imageCount=imageCount,
                                filename=filename,
-                               loraModel=loraModel)
+                               CNImgName=CNImgName)
             return JsonResponse({'msg': "successed"})
 
         if type == "img2img":
-            print(prompt, steps, imagefile.name)
             with open(join('./server/media/image', imagefile.name), 'wb') as fp:
                 for chunk in imagefile.chunks():
                     fp.write(chunk)
@@ -86,7 +97,7 @@ def generate(request):
                               strength=strength, guidance=guidance,
                               imageCount=imageCount,
                               filename=imagefile.name,
-                              loraModel=loraModel)
+                              CNImgName=CNImgName)
             return JsonResponse({'msg': "successed"})
 
         return JsonResponse({'msg': "uploaded"})
@@ -121,8 +132,11 @@ def changePipe(request):
     if request.method == 'POST':
         generateType = request.POST.get("type")
         model = request.POST.get("model")
-        print(generateType, model)
-        diffusion.loadModel(generateType, model)
+        CNModel = request.POST.get("CNModel")
+        print('generateType: '+str(generateType))
+        print('model: ' + str(model))
+        print('CNModel: ' + str(CNModel))
+        diffusion.loadModel(generateType, model, CNModel)
         return JsonResponse({'msg': "successed"})
 
 # def changeLora(request):

@@ -34,5 +34,6 @@ urlpatterns = [
     path('getPipeType/', thangka.getType),
     path('edgeInpaint/', thangka.generate_edge),
     path('chat/', ernie_bot.chat),
-    path('translate/', ernie_bot.translate)
+    path('translate/', ernie_bot.translate),
+    path('refine/', ernie_bot.optimize)
 ]

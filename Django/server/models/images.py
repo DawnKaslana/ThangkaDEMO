@@ -1,4 +1,7 @@
 from PIL import Image, ImageFilter, ImageOps
+import numpy as np
+import torch
+import cv2
 
 def flatten(img, bgcolor):
     """replaces transparency with bgcolor (example: "#ffffff"), returning an RGB mode image with no transparency"""
@@ -166,6 +169,23 @@ def has_transparency(img):
         if ext[3][0] < 255:
             return True
     return False
+
+def make_inpaint_condition(image, image_mask):
+    image = np.array(image.convert("RGB")).astype(np.float32) / 255.0
+    image_mask = np.array(image_mask.convert("L")).astype(np.float32) / 255.0
+
+    assert image.shape[0:1] == image_mask.shape[0:1], "image and image_mask must have the same image size"
+    image[image_mask > 0.5] = -1.0  # set as masked pixel
+    image = np.expand_dims(image, 0).transpose(0, 3, 1, 2)
+    image = torch.from_numpy(image)
+    return image
+
+def canny_image(image):
+    np_image = np.array(image)
+    np_image = cv2.Canny(np_image, 100, 200)
+    np_image = np_image[:, :, None]
+    np_image = np.concatenate([np_image, np_image, np_image], axis=2)
+    return Image.fromarray(np_image)
 
 
 
