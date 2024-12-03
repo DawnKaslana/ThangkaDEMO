@@ -164,18 +164,19 @@ const SettingDrawer = ({ open,
   };
 
   const clearImg = (type) => {
+    console.log(type)
     if (type === "img") {
       setImageSrc(null)
       setSelectedImg(undefined)
-      inputImgRef.current.value = ''
+      if (inputImgRef.current) inputImgRef.current.value = ''
     } else if (type === "mask") {
       setMaskSrc(null)
       setSelectedMask(undefined)
-      inputMaskRef.current.value = ''
+      if (inputMaskRef.current) inputMaskRef.current.value = ''
     } else if (type === "cn") {
       setCNImgSrc(null)
       setSelectedCNImg(undefined)
-      inputCNRef.current.value = ''
+      if (inputCNRef.current) inputCNRef.current.value = ''
     }
   }
 

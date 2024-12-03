@@ -29,9 +29,9 @@ INSERT INTO `class` (`id`,`user_id`, `value`, `negative`) VALUES
 
 -- 負面圖像描述
 INSERT INTO `class` (`id`,`user_id`, `value`, `negative`) VALUES
-(10, 0,	'质量',	1),
-(11, 0,	'构图',	1),
-(12, 0,	'負面元素',	1);
+(10, 0, '质量',	1),
+(11, 0, '构图',	1),
+(12, 0, '負面元素',	1);
 
 DROP TABLE IF EXISTS `label`;
 CREATE TABLE `label` (
@@ -379,6 +379,7 @@ INSERT INTO `label` (`user_id`, `value`, `class`) VALUES
 (0,	'blurry painting',	10),
 (0,	'normal quality',	10),
 (0,	'low quality',	10),
+(0,	'low res',	10),
 (0,	'worst quality', 10),
 (0,	'jpeg artifacts',	10),
 (0,	'grainy',	10),

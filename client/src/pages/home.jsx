@@ -356,7 +356,6 @@ export function Home() {
   }
 
   const edgeGenerate = (imgforGCN) => {
-    console.log('IsUploadCN:false')
     let image
     if (type !== "inpaint" && imgforGCN) image = imgforGCN
     else image = selectedImg
@@ -394,9 +393,6 @@ export function Home() {
   const handleChange = (newType, newModel, newCNModel) => {
     setModel(newModel)
     setLoading(true)
-    if (newType!=='inpaint') setSelectedMask(undefined)
-    setSelectedCNImg(undefined)
-    setCNImgSrc(null)
     const formData = new FormData();
     formData.append('type', newType);
     formData.append('model', newModel);

@@ -185,9 +185,9 @@ def changeModel(generateType, model, cnModel=None,ft=False):
 """
 presetting(loading) type & model
 """
-typeSet = "inpaint" #inpaint text2img img2img
-modelSet = "SDI2" #inpaint:[CNI SDI2 SD21 SD15]
-cnModelSet = "None" #None control_sd21_canny control_sd15_canny
+typeSet = "text2img" #inpaint text2img img2img
+modelSet = "SD21" #inpaint:[CNI SDI2 SD21 SD15]
+cnModelSet = "control_sd21_canny" #None control_sd21_canny control_sd15_canny
 
 # load pipe first time
 pipe = changeModel(typeSet, modelSet, cnModelSet, ft=True)
