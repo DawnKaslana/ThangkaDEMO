@@ -73,7 +73,7 @@ def generate(request):
                 for chunk in maskfile.chunks():
                     fp.write(chunk)
 
-            diffusion.inpaint(filename=imagefileName, isGIM=isGIM,
+            outputName = diffusion.inpaint(filename=imagefileName, isGIM=isGIM,
                               maskName=maskfile.name,
                               prompt=prompt, nagative_prompt=negativePrompt,
                               steps=steps, seed=seed,
@@ -81,27 +81,27 @@ def generate(request):
                               imageCount=imageCount,
                               SDModel=SDModel,
                               CNImgName=CNImgName)
-            return JsonResponse({'msg': "successed"})
+            return JsonResponse({'msg': "successed", 'outputName': outputName})
 
         if type == "text2img":
-            diffusion.text2img(prompt=prompt,
+            outputName = diffusion.text2img(prompt=prompt,
                                negativePrompt=negativePrompt,
                                steps=steps, seed=seed,
                                strength=strength, guidance=guidance,
                                imageCount=imageCount,
                                filename=filename,
                                CNImgName=CNImgName)
-            return JsonResponse({'msg': "successed"})
+            return JsonResponse({'msg': "successed", 'outputName': outputName})
 
         if type == "img2img":
-            diffusion.img2img(prompt=prompt,
+            outputName = diffusion.img2img(prompt=prompt,
                               negativePrompt=negativePrompt,
                               steps=steps, seed=seed,
                               strength=strength, guidance=guidance,
                               imageCount=imageCount,
                               filename=imagefileName, isGIM=isGIM,
                               CNImgName=CNImgName)
-            return JsonResponse({'msg': "successed"})
+            return JsonResponse({'msg': "successed", 'outputName': outputName})
 
         return JsonResponse({'msg': "uploaded"})
 

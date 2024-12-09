@@ -113,6 +113,7 @@ export function Home() {
   const [selectedCNImg, setSelectedCNImg] = useState(undefined);
   const [selectedImgGCN, setSelectedImgGCN] = useState(undefined);
   const [outputImgName, setOutputImgName] = useState(null);
+  const [outputImgs, setOutputImgs] = useState(null);
   const [imageSrc, setImageSrc] = useState(null);
   const [CNImgSrc, setCNImgSrc] = useState(null);
   
@@ -138,13 +139,16 @@ export function Home() {
   useEffect(() => {
   }, [chatDialogs]);
 
+
   // control pramas
   const [loading, setLoading] = useState(false);
+  const [scrolling, setScrolling] = useState(true);
   const [generateState, setGenerateState] = useState(false)
   const [inputError, setInputError] = useState(false)
   const [errorMsg, setErrorMsg] = useState("")
 
   const handleNewDialog = (args) => {
+    setScrolling(true);
     setChatDialogs([...chatDialogs, args])
   }
 
@@ -224,7 +228,6 @@ export function Home() {
   }
 
   const optimizePrompt = (isClick) => {
-    console.log('optimizePrompt'+isClick)
     if (prompt) {
       setGenerateState(true)
       const formData = new FormData();
@@ -323,20 +326,20 @@ export function Home() {
   }
 
   const inpaintGenerate = (formData) => {
-    let filename = selectedImg.generated? 
-    selectedImg.generated.slice(0, -4) : selectedImg.name.slice(0, -4)
     django({ url: '/generate/', method: 'post', data: formData })
       .then(res => {
         if (res.data.msg === "successed") {
+          let outputName = res.data.outputName
           django({
             url: '/getImg/', method: 'get', params: {
-              imageName: filename,
+              imageName: outputName,
               imageCount: imageCount,
               path:'output'
             }
           }).then(res => {
-            setOutputImgName(filename)
-            handleNewDialog({ type: 'output', src: res.data.img,
+            handleNewDialog({ type: 'output', 
+              src: res.data.img, 
+              filename: outputName,
               pramas: formData})
             setGenerateState(false)
           })
@@ -358,7 +361,6 @@ export function Home() {
               path:'output'
             }
           }).then(res => {
-            setOutputImgName(filename)
             handleNewDialog({ type: 'output', src: res.data.img,
               pramas: formData})
             setGenerateState(false)
@@ -368,20 +370,21 @@ export function Home() {
   }
 
   const img2imgGenerate = (formData) => {
-    let filename = selectedImg.generated? 
-    selectedImg.generated.slice(0, -4) : selectedImg.name.slice(0, -4)
     django({ url: '/generate/', method: 'post', data: formData })
       .then(res => {
         if (res.data.msg === "successed") {
+          let outputName = res.data.outputName
+          console.log(res.data.outputName)
           django({
             url: '/getImg/', method: 'get', params: {
-              imageName: filename,
+              imageName: outputName,
               imageCount: imageCount,
               path:'output'
             }
           }).then(res => {
-            setOutputImgName(filename)
-            handleNewDialog({ type: 'output', src: res.data.img,
+            handleNewDialog({ type: 'output', 
+              src: res.data.img, 
+              filename: outputName,
               pramas: formData})
             setGenerateState(false)
           })
@@ -389,74 +392,29 @@ export function Home() {
       }).catch((err)=>setGenerateState(false))
   }
 
-  const sendImgtoSrc = (imgSrc, idx) => {
-    setImageSrc(imgSrc)
-    console.log(outputImgName+"_"+idx+".png")
-    setSelectedImg({'generated':outputImgName+"_"+idx+".png"})
+  const sendImgtoSrc = (imgSrc, idx, filename) => {
+    setImageSrc("data:image/png;base64,"+imgSrc)
+    console.log(filename+"_"+idx+".png")
+    setSelectedImg({'generated':filename+"_"+idx+".png"})
     handleSendImgMenuClose()
   }
 
   const [anchorEl, setAnchorEl] = useState(null);
-  const sendImgMenuOpen = Boolean(anchorEl);
-  const handleSendImgMenuClose = () => setAnchorEl(null);
-  const handleSendImgMenuClick = (event) => {
-    console.log('handleSendImgMenuClick')
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleSendImg = (e,images) => {
-    if (images.length === 1) sendImgtoSrc("data:image/png;base64," + images[0], 0)
-    else handleSendImgMenuClick(e)
+  const [sendImgMenuOpen, setSendImgMenuOpen] = useState(false);
+  const handleSendImgMenuClose = () => {
+    setSendImgMenuOpen(false);
   }
 
-  const SendImgMenu = ({images}) => {
-    return <Menu
-      anchorEl={anchorEl}
-      id="send-img-menu"
-      open={sendImgMenuOpen}
-      onClose={handleSendImgMenuClose}
-      slotProps={{
-        paper: {
-          elevation: 0,
-          sx: {
-            overflow: 'visible',
-            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-            mt: 1.5,
-            '& .MuiAvatar-root': {
-              width: 32,
-              height: 32,
-              ml: -0.5,
-              mr: 1,
-            },
-            '&::before': {
-              content: '""',
-              display: 'block',
-              position: 'absolute',
-              top: 0,
-              right: 14,
-              width: 10,
-              height: 10,
-              bgcolor: 'background.paper',
-              transform: 'translateY(-50%) rotate(45deg)',
-              zIndex: 0,
-            },
-          },
-        },
-      }}
-      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-    >
-    {images.map((imgSrc,idx)=>
-      <MenuItem onClick={()=>sendImgtoSrc(imgSrc, idx)}>
-        <ListItemIcon>
-          <Filter1Icon fontSize="small" />
-        </ListItemIcon>
-      </MenuItem>
-      )
+  const handleSendImg = (event,images, filename) => {
+    setScrolling(false)
+    setOutputImgs(images)
+    setOutputImgName(filename)
+    if (images.length === 1) sendImgtoSrc(images[0], 0, filename)
+    else {
+      setSendImgMenuOpen(true)
+      setAnchorEl(event.currentTarget);
     }
-    </Menu>
   }
-
 
   const edgeGenerate = (imgforGCN) => {
     let image
@@ -525,15 +483,14 @@ export function Home() {
             sx={{ maxWidth: '50vw', pr:1, pl: 1}}>
         <ReactMarkdown className={classes.reactMarkDown}>{key<1 ? helloText : item.content}</ReactMarkdown>
       </Card>
-      <AlwaysScrollToView />
     </Box>
   )
 
   const outputDialog = (item, key) => (
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1 }}>
       <AIAvatar/>
-      <Card sx={{ p: 1, mr: 1 }}>
-        <Box>
+      <Card sx={{ p: 1, mr: 1}}>
+        <Box sx={{height:item.src.length < 3 ? '512px': '1024px'}}>
           {/* <RViewerJS options={{minWidth:512, movable:false, scalable:false}}> */}
           <RViewerJS options={RVJSoptions} >
             <Box className={classes.flexRow}>
@@ -561,14 +518,11 @@ export function Home() {
             { type !== 'text2img'?
             <Tooltip title={<h3>Send image to input</h3>} placement="top" arrow>
               <IconButton sx={{p:0, marginLeft:"auto", marginBottom:"auto"}} edge="start" color="inherit"
-                onClick={(e)=>handleSendImg(e,item.src)}>
+                onClick={(e)=>handleSendImg(e,item.src, item.filename)}>
                 <DoubleArrowIcon sx={{color: '#6A0DA0', transform: 'rotate(180deg)',}}/>
                 <ImageIcon sx={{color: '#6A0DA0'}}/>
               </IconButton>
             </Tooltip> : null
-            }
-            { type !== 'text2img'?
-            <SendImgMenu images={item.src}/> : null
             }
           </Box>
           <Box className={classes.flexRow}>
@@ -632,7 +586,6 @@ export function Home() {
           <Typography>{item.content}</Typography>
       </Card>
       <Avatar sx={{bgcolor: '#296bae', width: 56, height: 56}}>{userName.slice(0,2)}</Avatar>
-      <AlwaysScrollToView />
     </Box>
   )
   
@@ -658,7 +611,7 @@ export function Home() {
   const AlwaysScrollToView = () => {
     const elementRef = useRef();
     useEffect(() => elementRef.current?.scrollIntoView());
-    return <div ref={elementRef} />;
+    if (scrolling) return <div ref={elementRef} />;
   };
 
 
@@ -702,6 +655,24 @@ export function Home() {
         negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt}
         userId={userId}/>
       <Container disableGutters maxWidth={false} sx={{ m: 0, pb: 10, overflow: 'auto', height: '100vh' }} >
+      <Menu
+        anchorEl={anchorEl}
+        id="send-img-to-input-menu"
+        open={sendImgMenuOpen}
+        onClose={handleSendImgMenuClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+      {outputImgs?.map((imgSrc,idx)=>
+        <MenuItem key={idx} onClick={()=>sendImgtoSrc(imgSrc, idx, outputImgName)}>
+            {idx === 0? <Filter1Icon fontSize="small" /> :null}
+            {idx === 1? <Filter2Icon fontSize="small" /> :null}
+            {idx === 2? <Filter3Icon fontSize="small" /> :null}
+            {idx === 3? <Filter4Icon fontSize="small" /> :null}
+        </MenuItem>
+        )
+      }
+      </Menu>
       <Snackbar 
         open={inputError}
         sx={{ width: "80%" }}
@@ -713,7 +684,7 @@ export function Home() {
         </Alert>
       </Snackbar>
         {showDialog(chatDialogs)}
-        <AlwaysScrollToView />
+        <AlwaysScrollToView/>
       </Container>
     </Box>
   )

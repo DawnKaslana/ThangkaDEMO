@@ -11,6 +11,7 @@ from diffusers import StableDiffusionPipeline, StableDiffusionControlNetPipeline
     AutoPipelineForImage2Image
 import torch
 import time
+
 import numpy as np
 from skimage.feature import canny
 from PIL import Image, ImageChops, ImageOps, ImageFilter
@@ -177,14 +178,18 @@ def changeModel(generateType, model, cnModel=None,ft=False):
                 use_safetensors=True,
                 torch_dtype=torch.float16)
 
+    # pipe.enable_model_cpu_offload()
+    # # remove following line if xFormers is not installed or you have PyTorch 2.0 or higher installed
+    # pipe.enable_xformers_memory_efficient_attention()
+
     return pipe
 
 
 """
-presetting(loading) type & model
+preloading type & model
 """
-typeSet = "img2img" #inpaint text2img img2img
-modelSet = "SD21" #inpaint:[CNI SDI2 SD21 SD15]
+typeSet = "inpaint" #inpaint text2img img2img
+modelSet = "SDI2" #inpaint:[CNI SDI2 SD21 SD15]
 cnModelSet = "None" #None control_sd21_canny control_sd15_canny
 
 # load pipe first time
@@ -325,6 +330,13 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
             control_image=cnImg,
             ).images
 
+    timestamp = str(int(time.time()))
+    if isGIM: # replace timestamp
+        outputName = filename[:-4].split('_')
+        outputName = '_'.join(outputName[:-2])
+        outputName = outputName + '_' + timestamp
+    else:  # add timestamp
+        outputName = filename[:-4] + '_' + timestamp
 
     for i in range(imageCount):
         newimage = Image.new('RGBA', image.size, (0, 0, 0, 0))
@@ -340,14 +352,16 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
             newimage.paste(image, (0, 0))
             newimage.paste(output[i], (0, 0), mask=mask_image.convert('L'))
 
-        newimage.save(join(output_path, filename[:-4] + '_' + str(i) + ".png"))
+        newimage.save(join(output_path, outputName + '_' + str(i) + ".png"))
+
+    return outputName
 
 def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, CNImgName=None):
     print('func: text2img')
-    print('prompt: ' + str(prompt))
-    print('filename: ' + filename)
-    print('CNImgName: ' + str(CNImgName))
-    print('imageCount: ' + str(imageCount))
+    print('prompt: ', prompt)
+    print('filename: ', filename)
+    print('CNImgName: ', CNImgName)
+    print('imageCount: ', imageCount)
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
@@ -377,18 +391,19 @@ def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, 
             generator=generator,
         ).images
 
+
     for i in range(imageCount):
         output[i].save(join(output_path, filename + '_' + str(i) + ".png"))
 
-
+    return filename
 
 
 def img2img(filename, isGIM, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, CNImgName=None):
     print('func: img2img')
-    print('prompt: ' + str(prompt))
-    print('isGIM: ' + str(isGIM))
-    print('filename: ' + filename)
-    print('CNImgName: ' + str(CNImgName))
+    print('prompt: ', prompt)
+    print('isGIM: ', isGIM)
+    print('filename: ', filename)
+    print('CNImgName: ', CNImgName)
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
@@ -422,8 +437,18 @@ def img2img(filename, isGIM, prompt, negativePrompt, steps, seed, strength, guid
             generator=generator,
         ).images
 
+    timestamp = str(int(time.time()))
+    if isGIM: # replace timestamp
+        outputName = filename[:-4].split('_')
+        outputName = '_'.join(outputName[:-2])
+        outputName = outputName + '_' + timestamp
+    else:  # add timestamp
+        outputName = filename[:-4] + '_' + timestamp
+
     for i in range(imageCount):
-        output[i].save(join(output_path, filename[:-4] + '_' + str(i) + ".png"))
+        output[i].save(join(output_path, outputName + '_' + str(i) + ".png"))
+
+    return outputName
 
 
 def img2text():
