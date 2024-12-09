@@ -9,6 +9,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
 import Checkbox from '@mui/material/Checkbox';
+import Card from '@mui/material/Card';
 import List from '@material-ui/core/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -37,7 +38,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
-
+import Paper from '@material-ui/core/Paper';
 
 //Icon import
 import AddIcon from '@mui/icons-material/Add';
@@ -52,23 +53,25 @@ import FontDownloadIcon from '@mui/icons-material/FontDownload';
 import CollectionsIcon from '@mui/icons-material/Collections';
 import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import DoneIcon from '@mui/icons-material/Done';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import GTranslateIcon from '@mui/icons-material/GTranslate';
 
-
-// other func
+// other func import
 import RViewerJS from 'viewerjs-react'
 import LinearWithValueLabelProgress from './progress.jsx'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import rehypeRaw from "rehype-raw";
-
+import rehypeRaw from 'rehype-raw';
+import ReactImgEditor from 'react-img-editor'
 
 // CSS
 import useStyles from '../css/style';
+import 'react-img-editor/assets/index.css'
 
-//api
+// api
 import { server, django, file_url } from '../api.js'
+
 
 const modelList = [
   { value: "SDI2", label: "Stable Diffusion Inpaint 2", type: ["inpaint"] },
@@ -98,6 +101,18 @@ const listTheme = createTheme({
     },
   },
 });
+
+// Components Settings: RVJSoption, editImgToolbar
+const RVJSoptions = {
+  viewed() {
+    this.viewer.zoomTo(1.8);
+  },
+}
+const editImgToolbar = { items: [
+  // 'zoomIn','zoomOut', '|',
+  'pen', 'eraser', 'arrow', 'rect', 'circle', '|',
+  'repeal', 'download', 'crop',]
+}
 
 
 const SettingDrawer = ({ open, 
@@ -132,10 +147,12 @@ const SettingDrawer = ({ open,
   const inputCNRef = useRef();
   const inputImgforGCNRef = useRef();
 
-  // control Help Dialog
+  // control Help Dialog & Edit Img
   const [helpOpen, setHelpOpen] = useState(false)
   const [helpContent, setHelpContent] = useState('')
+  const [editImgOpen, setEditImgOpen] = useState(false)
 
+  // control Img Upload: selectImgHandler, clearImg, preview
   const handleOnClickImgUpload = () => { inputImgRef.current.click(); };
   const handleOnClickMaskUpload = () => { inputMaskRef.current.click(); };
   const handleOnClickCNUpload = () => { inputCNRef.current.click(); };
@@ -182,13 +199,19 @@ const SettingDrawer = ({ open,
   }
 
   const preview = (event, type) => {
-    const file = event.target.files[0];
+    let file;
+    if (type === "editimg" || type === "editmask"){
+      file = event;
+    } else {
+      file = event.target.files[0];
+    }
+    
     const reader = new FileReader();
 
-    reader.addEventListener("load", function () {
+    reader.addEventListener('load', function () {
       // convert image file to base64 string
-      if(type === "img") setImageSrc(reader.result)
-      else if(type === "mask") setMaskSrc(reader.result)
+      if(type === "img" || type === "editimg") setImageSrc(reader.result)
+      else if(type === "mask"  || type === "editmask") setMaskSrc(reader.result)
       else if(type === "cn") setCNImgSrc(reader.result)
     }, false);
 
@@ -197,6 +220,8 @@ const SettingDrawer = ({ open,
     }
   };
 
+  // Change Generate Type & Model:
+  // handleChangeType, handleChangeModel, handleChangeLora, handleChangeCN
   const handleChangeType = (e, typeValue) => {
     if (typeValue !== type){
       if (typeValue!=='inpaint') clearImg("mask")
@@ -223,15 +248,12 @@ const SettingDrawer = ({ open,
     }
   }
 
+  // control Change Generate Params: Step uplimit
   const handleChangeSteps = (value) =>{
-    //設置上限
     value <= 200 ? setSteps(value) : setSteps(200)
   }
 
-  const setDisable = (val) => {
-    return
-  }
-
+  // 左側參數設定欄
   const Options = () => {
     return(
       <Box sx={{p:2}}>
@@ -263,7 +285,7 @@ const SettingDrawer = ({ open,
 
         <Typography variant="h6">选择生成模型</Typography>
         <Select value={model} onChange={(e)=>handleChangeModel(e.target.value)}
-                fullWidth color="secondary">
+                fullWidth color="secondary" disabled={generateState}>
           {modelList.map((option) => (
             option.type.includes(type)?
             <MenuItem key={option.value} value={option.value}>
@@ -289,7 +311,7 @@ const SettingDrawer = ({ open,
         {/* 是否使用邊緣模型(controlNet canny 2) */}
         <Typography variant="h6" mt={2}>控制模型选择</Typography>
         <Select value={CNModel} onChange={(e)=>handleChangeCN(e.target.value)}
-                fullWidth color="secondary">
+                fullWidth color="secondary" disabled={generateState}>
             <MenuItem key={0} value={'None'}>
               None
             </MenuItem>
@@ -302,7 +324,14 @@ const SettingDrawer = ({ open,
 
         {/* 上傳图片 */}
         { type === 'text2img'? null: 
-          <Typography variant="h6" mt={2}>上傳图片</Typography>}
+          <Box className={classes.flexRow}>
+            <Typography variant="h6" mt={2}>上傳图片</Typography>
+            <Box sx={{flexGrow:1}}/>
+            <IconButton sx={{ml: 1}} 
+              onClick={()=>setEditImgOpen('editimg')}>
+              <AutoModeIcon/>
+            </IconButton>
+          </Box>}
         { type === 'text2img'? null: <Box className={classes.imgBox}>
           <input style={{ display: 'none' }}
             ref={inputImgRef}
@@ -310,7 +339,7 @@ const SettingDrawer = ({ open,
             onChange={(e)=>selectImgHandler(e,"img")} />
           {imageSrc?
           <Box sx={{position:"absolute"}}>
-            <RViewerJS sx={{position:"absolute"}}>
+            <RViewerJS sx={{position:"absolute"}} options={RVJSoptions}>
               <img height="200px" src={imageSrc} alt="uploaded image"/>
             </RViewerJS>
           </Box>: null}
@@ -330,19 +359,24 @@ const SettingDrawer = ({ open,
 
         {/* 上傳Mask */}
         { type === 'inpaint'? 
-          <Typography variant="h6" mt={1}>上傳遮罩</Typography>: null}
+          <Box className={classes.flexRow}>
+            <Typography variant="h6" mt={1}>上傳遮罩</Typography>
+            <Box sx={{flexGrow:1}}/>
+            <IconButton sx={{ml: 1}} 
+              onClick={()=>setEditImgOpen('editmask')}>
+              <AutoModeIcon/>
+            </IconButton>
+          </Box> : null}
         { type === 'inpaint'? <Box className={classes.imgBox}>
           <input style={{ display: 'none' }}
             ref={inputMaskRef}
             type="file" accept="image/*"
             onChange={(e)=>selectImgHandler(e,"mask")} />
-            <IconButton disabled={generateState} sx={{ml: 1}} 
-              onClick={type==='inpaint'?edgeGenerate:handleOnClickImgGCNUpload}>
-              <AutoModeIcon/>
-            </IconButton>
           {maskSrc?
           <Box sx={{position:"absolute"}}>
-            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={maskSrc}/></RViewerJS>
+            <RViewerJS sx={{position:"absolute"}} options={RVJSoptions}>
+              <img height="200px" src={maskSrc}/>
+            </RViewerJS>
           </Box>: null}
           {!maskSrc?
           <IconButton onClick={handleOnClickMaskUpload}>
@@ -379,7 +413,9 @@ const SettingDrawer = ({ open,
             onChange={(e)=>selectImgHandler(e,"cn")} />
           {CNImgSrc?
           <Box sx={{position:"absolute"}}>
-            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={CNImgSrc}/></RViewerJS>
+            <RViewerJS sx={{position:"absolute"}} options={RVJSoptions}>
+              <img height="200px" src={CNImgSrc}/>
+            </RViewerJS>
           </Box>: null}
           {!CNImgSrc?
             <IconButton onClick={handleOnClickCNUpload}>
@@ -394,7 +430,6 @@ const SettingDrawer = ({ open,
               </IconButton>
             </Box>}
         </Box>}
-
 
         <Box className={classes.flexRow} sx={{justifyContent:'space-between', mt:2}}>
           <Box sx={{width:'25%'}}>
@@ -526,12 +561,12 @@ const SettingDrawer = ({ open,
   const HelpDialog = () => (
     <Dialog
     onClose={()=>setHelpOpen(false)}
-    aria-labelledby="help-dialog-title"
+    aria-labelledby="help-dialog"
     open={helpOpen}
     maxWidth='md'
     fullWidth
     >
-      <DialogTitle sx={{ m: 0, p: 2, fontSize:'2em' }} id="customized-dialog-title">
+      <DialogTitle sx={{ m: 0, p: 2, fontSize:'2em' }} id="HelpDialog">
         使用说明
       </DialogTitle>
       <IconButton
@@ -557,6 +592,58 @@ const SettingDrawer = ({ open,
     </Dialog>
   )
 
+  const stageRef = useRef()
+  
+  const setStage = (stage) => {
+    stageRef.current = stage
+  }
+
+  const handleDoneEditImg = () => {
+    const canvas = stageRef.current.clearAndToCanvas({ pixelRatio: stageRef.current._pixelRatio })
+    canvas.toBlob(function(blob) {
+      preview(blob, editImgOpen)
+      console.log(blob)
+      setSelectedImg(blob)
+    }, 'image/png')
+    setEditImgOpen(false)
+  }
+
+  const EditImgDialog = () => (
+    <Dialog
+    aria-labelledby="make-image-dialog"
+    open={Boolean(editImgOpen)}
+    maxWidth='lg'
+    // fullWidth
+    sx={{zIndex:10}}
+    >
+      <DialogTitle sx={{ m: 0, p: 2, fontSize:'2em' }} id="EditImg">
+        {editImgOpen === 'editimg'? '編輯圖像' : '製作遮罩'}
+      </DialogTitle>
+      <IconButton
+        aria-label="done"
+        onClick={handleDoneEditImg}
+        sx={{ position: 'absolute', right: 50, top: 8, color: '#00A600' }}
+      >
+        <DoneIcon />
+      </IconButton>
+      <IconButton
+        aria-label="close"
+        onClick={()=>setEditImgOpen(false)}
+        sx={{ position: 'absolute', right: 8, top: 8, color: '#BF0060' }}
+      >
+        <CloseIcon />
+      </IconButton>
+      <DialogContent dividers sx={{margin:'0 auto'}}>
+          <ReactImgEditor
+            src={imageSrc}
+            toolbar={editImgToolbar}
+            getStage={setStage}/>
+      </DialogContent>
+    </Dialog>
+  )
+
+  // 翻譯選項菜單: handleTranslateClick/Close
+  // 翻譯功能: translate
   const [anchorEl, setAnchorEl] = useState(null);
   const [languageNMenu, setLanguageNMenu] = useState(0);
   const languageMenuOpen = Boolean(anchorEl);
@@ -581,6 +668,7 @@ const SettingDrawer = ({ open,
     handleTranslateClose()
   }
 
+  // get help.md
   useEffect(() => {
     server({url:'/getFile', params:{filename:'help.md'}}).then((res) => {
       setHelpContent(res.data)
@@ -624,7 +712,8 @@ const SettingDrawer = ({ open,
       {/* Warning: findDOMNode is deprecated and will be removed in the next major release. (because Tooltip) */}
       {!open ? <List>
         <Tooltip title={<h3>inpaint model</h3>} placement="right" arrow>
-        <ListItem button selected={type === 'inpaint'} onClick={(e)=>handleChangeType(e,'inpaint')}>
+        <ListItem button selected={type === 'inpaint'} disabled={generateState}
+          onClick={(e)=>handleChangeType(e,'inpaint')}>
           {type === 'inpaint'?
           <ListItemIcon sx={{ pl: .5, color:"white" }}><BrokenImageIcon /></ListItemIcon>:
           <ListItemIcon sx={{ pl: .5 }}><BrokenImageIcon /></ListItemIcon>}
@@ -632,7 +721,8 @@ const SettingDrawer = ({ open,
         </ListItem>
         </Tooltip>
         <Tooltip title={<h3>text2img model</h3>} placement="right" arrow>
-        <ListItem button selected={type === 'text2img'} onClick={(e)=>handleChangeType(e,'text2img')}>
+        <ListItem button selected={type === 'text2img'} disabled={generateState}
+          onClick={(e)=>handleChangeType(e,'text2img')}>
         {type === 'text2img'?
           <ListItemIcon sx={{ pl: .5, color:"white" }}><FontDownloadIcon /></ListItemIcon>:
           <ListItemIcon sx={{ pl: .5 }}><FontDownloadIcon /></ListItemIcon>}
@@ -640,7 +730,8 @@ const SettingDrawer = ({ open,
         </ListItem>
         </Tooltip>
         <Tooltip title={<h3>img2img model</h3>} placement="right" arrow>
-        <ListItem button selected={type === 'img2img'} onClick={(e)=>handleChangeType(e, 'img2img')}>
+        <ListItem button selected={type === 'img2img'} disabled={generateState}
+          onClick={(e)=>handleChangeType(e, 'img2img')}>
         {type === 'img2img'?
           <ListItemIcon sx={{ pl: .5, color:"white" }}><CollectionsIcon /></ListItemIcon>:
           <ListItemIcon sx={{ pl: .5 }}><CollectionsIcon /></ListItemIcon>}
@@ -654,9 +745,9 @@ const SettingDrawer = ({ open,
       <TabContext value={type? type : 'text2img'} >
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <TabList onChange={handleChangeType} aria-label="generate type tabs" >
-            <Tab label="inpaint" value="inpaint"  />
-            <Tab label="text2img" value="text2img" />
-            <Tab label="img2img" value="img2img" />
+            <Tab label="inpaint" value="inpaint" disabled={generateState} />
+            <Tab label="text2img" value="text2img" disabled={generateState} />
+            <Tab label="img2img" value="img2img" disabled={generateState} />
           </TabList>
         </Box>
       </TabContext> : null}
@@ -708,6 +799,7 @@ const SettingDrawer = ({ open,
         open? <Box sx={{ mb: 9 }}/> : <Box sx={{ mb: 9 }} />
       }
       </ThemeProvider>
+      <EditImgDialog/>
       <HelpDialog/>
     </Drawer>
     

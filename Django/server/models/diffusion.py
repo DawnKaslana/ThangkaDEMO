@@ -178,9 +178,9 @@ def changeModel(generateType, model, cnModel=None,ft=False):
                 use_safetensors=True,
                 torch_dtype=torch.float16)
 
-    # pipe.enable_model_cpu_offload()
-    # # remove following line if xFormers is not installed or you have PyTorch 2.0 or higher installed
-    # pipe.enable_xformers_memory_efficient_attention()
+    pipe.enable_model_cpu_offload()
+    # remove following line if xFormers is not installed or you have PyTorch 2.0 or higher installed
+    pipe.enable_xformers_memory_efficient_attention()
 
     return pipe
 
@@ -188,8 +188,8 @@ def changeModel(generateType, model, cnModel=None,ft=False):
 """
 preloading type & model
 """
-typeSet = "inpaint" #inpaint text2img img2img
-modelSet = "SDI2" #inpaint:[CNI SDI2 SD21 SD15]
+typeSet = "img2img" #inpaint text2img img2img
+modelSet = "SD21" #inpaint:[CNI SDI2] SD:[SD21 SD15]
 cnModelSet = "None" #None control_sd21_canny control_sd15_canny
 
 # load pipe first time
@@ -229,7 +229,10 @@ generate edge
 """
 def edge_inpaint(filename, maskname=None):
     #只有原圖tocanny 沒給mask不用跑edge修復
-    print(filename, maskname)
+    print('Func: edge_inpaint')
+    print('filename: ', filename)
+    print('maskname: ', maskname)
+
     if maskname:
         py_dir = join(edge_connect_dir, 'test.py')
         checkpoints = join(edge_model_path,'thangkaAC_1') #thangkaAC_1
@@ -267,10 +270,11 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
             steps, seed, strength, guidance, imageCount, SDModel, CNImgName=None):
     # params check
     print('func: inpaint')
-    print('prompt: ' + str(prompt))
-    print('fileName: ' + str(filename))
-    print('maskName: ' + str(maskName))
-    print('CNImgName: ' + str(CNImgName))
+    print('prompt:', prompt)
+    print('filename:', filename)
+    print('maskName:', maskName)
+    print('CNImgName:', CNImgName)
+    print('imageCount:', imageCount)
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
@@ -358,10 +362,10 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
 
 def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, CNImgName=None):
     print('func: text2img')
-    print('prompt: ', prompt)
-    print('filename: ', filename)
-    print('CNImgName: ', CNImgName)
-    print('imageCount: ', imageCount)
+    print('prompt:', prompt)
+    print('filename:', filename)
+    print('CNImgName:', CNImgName)
+    print('imageCount:', imageCount)
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
@@ -400,14 +404,16 @@ def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, 
 
 def img2img(filename, isGIM, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, CNImgName=None):
     print('func: img2img')
-    print('prompt: ', prompt)
-    print('isGIM: ', isGIM)
-    print('filename: ', filename)
-    print('CNImgName: ', CNImgName)
+    print('prompt:', prompt)
+    print('isGIM:', isGIM)
+    print('filename:', filename)
+    print('CNImgName:', CNImgName)
+    print('loadImgPath:', output_path if isGIM else image_path)
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
     init_image = Image.open(join(output_path if isGIM else image_path, filename)).resize((512,512))
+    init_image = images.flatten(init_image, "#ffffff")
 
     if CNImgName:
         cnImg = Image.open(join(edge_path, CNImgName)).resize((512, 512))

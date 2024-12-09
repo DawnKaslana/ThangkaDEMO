@@ -22,7 +22,8 @@
     "viewerjs":"^1.11.6",
     "@uidotdev/usehooks":"^2.4.1",
     "remark-gfm":"^4.0.0",
-    "rehype-raw":"^7.0.0"
+    "rehype-raw":"^7.0.0",
+    "react-img-editor":"0.1.4",
   },
   "scripts": {
     "start": "react-scripts start",

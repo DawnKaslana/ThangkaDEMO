@@ -5,9 +5,11 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
+from django.core.exceptions import ValidationError
 import server.models.diffusion as diffusion
 import base64
 from os.path import join, isdir, isfile
+
 
 # 获取csrftoken
 @ensure_csrf_cookie
@@ -62,6 +64,11 @@ def generate(request):
             imagefileName = imagefile
         elif imagefile:
             imagefileName = imagefile.name
+            # 如果沒有檔名，修改後的圖像送blob，就自定義檔名
+            if imagefileName == 'blob':
+                imagefileName = str(int(time.time())) + '.png'
+                print('imagefileName:', imagefileName)
+
             with open(join('./server/media/image', imagefileName), 'wb') as fp:
                 for chunk in imagefile.chunks():
                     fp.write(chunk)
@@ -109,15 +116,18 @@ def generate_edge(request):
     if request.method == 'POST':
         imagefile = request.FILES.get("image")
         maskfile = request.FILES.get("mask")
+
         with open(join('./server/media/image', imagefile.name), 'wb') as fp:
             for chunk in imagefile.chunks():
                 fp.write(chunk)
+
         if maskfile:
             with open(join('./server/media/mask', maskfile.name), 'wb') as fp:
                 for chunk in maskfile.chunks():
                     fp.write(chunk)
         if diffusion.edge_inpaint(imagefile.name, maskfile.name if maskfile else None) == 0:
             return JsonResponse({'msg': "successed"})
+
 
 def send_img(request):
     if request.method == 'GET':
@@ -142,8 +152,6 @@ def send_img(request):
         return JsonResponse(result)
 
 
-
-
 def changePipe(request):
     if request.method == 'POST':
         generateType = request.POST.get("type")
@@ -154,12 +162,6 @@ def changePipe(request):
         print('cnModel: ' + str(cnModel))
         diffusion.loadModel(generateType, model, cnModel)
         return JsonResponse({'msg': "successed"})
-
-# def changeLora(request):
-#     if request.method == 'POST':
-#         loraModelName = request.POST.get("loraModelName")
-#         diffusion.loadLora(loraModelName)
-#         return JsonResponse({'msg': "successed"})
 
 
 def getType(request):

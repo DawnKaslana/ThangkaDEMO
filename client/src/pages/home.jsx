@@ -42,9 +42,11 @@ import SettingDrawer from '../components/settingDrawer.jsx';
 import LabelDrawer from '../components/labelDrawer.jsx';
 import loadImg from '../images/purpleLoader-crop.gif'
 
-
 //api
 import { server, django, file_url } from '../api.js'
+
+// Test params
+const isTest = true;
 
 
 // cookie
@@ -95,8 +97,8 @@ export function Home() {
   // generate params
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState(preNegativePrompt);
-  const [type, setType] = useState('text2img')
-  const [model, setModel] = useState('SD21')
+  const [type, setType] = useState('inpaint')
+  const [model, setModel] = useState('SDI2')
   const [loraModel, setLoraModel] = useState('None')
   const [loraList, setLoraList] = useState([])
   const [CNList, setCNList] = useState([])
@@ -116,8 +118,15 @@ export function Home() {
   const [outputImgs, setOutputImgs] = useState(null);
   const [imageSrc, setImageSrc] = useState(null);
   const [CNImgSrc, setCNImgSrc] = useState(null);
-  
 
+  // control pramas
+  const [loading, setLoading] = useState(false);
+  const [scrolling, setScrolling] = useState(true);
+  const [generateState, setGenerateState] = useState(true)
+  const [inputError, setInputError] = useState(false)
+  const [errorMsg, setErrorMsg] = useState("")
+  const [errorState, setErrorState] = useState(true)
+  
   // 讀取後端的模型狀態
   const getPipeType = () => {
     django({ url: '/getPipeType/', method: 'get'})
@@ -128,8 +137,17 @@ export function Home() {
       setCNModel(res.data.cnModel?res.data.cnModel:'None')
       setLoraList(res.data.loraList)
       setCNList(res.data.cnList)
+      if (!isTest) setErrorState(false)
+      setGenerateState(false)
     })
-    .catch((err)=>setGenerateState(false))
+    .catch((err)=>{
+      if (!isTest) {
+        setInputError(true)
+        setErrorMsg('後端連接錯誤')
+        setErrorState(true)
+      }
+      setGenerateState(true)
+    })
   }
 
   useEffect(() => {
@@ -140,25 +158,21 @@ export function Home() {
   }, [chatDialogs]);
 
 
-  // control pramas
-  const [loading, setLoading] = useState(false);
-  const [scrolling, setScrolling] = useState(true);
-  const [generateState, setGenerateState] = useState(false)
-  const [inputError, setInputError] = useState(false)
-  const [errorMsg, setErrorMsg] = useState("")
-
+  // 對話相關功能: handleNewDialog, deleteDialogs, revokeDialogs, regenerateDialog
   const handleNewDialog = (args) => {
     setScrolling(true);
     setChatDialogs([...chatDialogs, args])
   }
 
   const deleteDialogs = () => {
+    if (errorState) return
     setChatDialogs([{ type: 'msg', role: 'assistant', content:helloText}])
     setMessages([])
   }
 
   const revokeDialogs = () => {
-    if(messages.length>=1){
+    if (errorState) return
+    if (messages.length>=1) {
       if (chatDialogs.slice(-1)[0].role === "assistant"){
         setMessages([...messages.slice(0,-2)])
         setChatDialogs([...chatDialogs.slice(0,-2)])
@@ -170,7 +184,8 @@ export function Home() {
   }
 
   const regenerateDialogs = () => {
-    if(messages.length>=1){
+    if (errorState) return
+    if (messages.length>=1) {
       if (chatDialogs.slice(-1)[0].role === "assistant"){
 
         setChatDialogs([...chatDialogs.slice(0, -1), { type: 'load', class: 'speak' }])
@@ -189,6 +204,7 @@ export function Home() {
   }
   
 
+  // 處理聊天消息
   const handleMessages = (args, rm) => {
     if (args.content) {
       let chatList
@@ -221,6 +237,7 @@ export function Home() {
     }
   }
 
+  // 對話回傳操作: changeParams, optimizePrompt
   const changeParams = (params) => {
     if (params.prompt) setPrompt(params.prompt)
     if (params.steps) setSteps(params.steps)
@@ -251,7 +268,7 @@ export function Home() {
     }
   }
 
-
+  // 生成功能: generateHandler, inpaintGenerate, text2imgGenerate, img2imgGenerate, edgeGenerate
   const generateHandler = (args) => {
     if (args.prompt) setPrompt(args.prompt)
     if (CNModel !== 'None' && !selectedCNImg){
@@ -392,30 +409,6 @@ export function Home() {
       }).catch((err)=>setGenerateState(false))
   }
 
-  const sendImgtoSrc = (imgSrc, idx, filename) => {
-    setImageSrc("data:image/png;base64,"+imgSrc)
-    console.log(filename+"_"+idx+".png")
-    setSelectedImg({'generated':filename+"_"+idx+".png"})
-    handleSendImgMenuClose()
-  }
-
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [sendImgMenuOpen, setSendImgMenuOpen] = useState(false);
-  const handleSendImgMenuClose = () => {
-    setSendImgMenuOpen(false);
-  }
-
-  const handleSendImg = (event,images, filename) => {
-    setScrolling(false)
-    setOutputImgs(images)
-    setOutputImgName(filename)
-    if (images.length === 1) sendImgtoSrc(images[0], 0, filename)
-    else {
-      setSendImgMenuOpen(true)
-      setAnchorEl(event.currentTarget);
-    }
-  }
-
   const edgeGenerate = (imgforGCN) => {
     let image
     if (type !== "inpaint" && imgforGCN) image = imgforGCN
@@ -442,10 +435,38 @@ export function Home() {
               setGenerateState(false)
             })
           }
-        }).catch((err)=>setGenerateState(false))
+        }).catch((err)=>{
+          console.log(err)
+          setGenerateState(false)
+      })
     } else {
       setInputError(true)
       setErrorMsg("請輸入原始圖像。")
+    }
+  }
+
+  // handleSendImgtoInput
+  const sendImgtoSrc = (imgSrc, idx, filename) => {
+    setImageSrc("data:image/png;base64,"+imgSrc)
+    console.log(filename+"_"+idx+".png")
+    setSelectedImg({'generated':filename+"_"+idx+".png"})
+    handleSendImgMenuClose()
+  }
+
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [sendImgMenuOpen, setSendImgMenuOpen] = useState(false);
+  const handleSendImgMenuClose = () => {
+    setSendImgMenuOpen(false);
+  }
+
+  const handleSendImg = (event,images, filename) => {
+    setScrolling(false)
+    setOutputImgs(images)
+    setOutputImgName(filename)
+    if (images.length === 1) sendImgtoSrc(images[0], 0, filename)
+    else {
+      setSendImgMenuOpen(true)
+      setAnchorEl(event.currentTarget);
     }
   }
 
@@ -467,11 +488,13 @@ export function Home() {
   }
 
 
-  //Drawer
+  //Control Drawers
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [labelDrawerOpen, setLabelDrawerOpen] = useState(false);
   const [isNegativeLabel, setIsNegativeLabel] = useState(0);
 
+
+  // 對話框元件: AIAvatar, AIDialog, outputDialog, generatingDialog, speakDialog, userDialog, showDialog
   const AIAvatar = () => (
     <Avatar sx={{bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1}}>TY</Avatar>
   )
@@ -577,7 +600,7 @@ export function Home() {
       </Card>
     </Box>
   )
-
+  
   const userDialog = (item, key) => (
     <Box key={key} display="flex" flexDirection="row" justifyContent="right" sx={{ mt: 1, mr: 1 }}>
       <Card variant="outlined"
@@ -589,7 +612,7 @@ export function Home() {
     </Box>
   )
   
-
+  // 控制對話列表顯示: showDialog, AlwaysScrollToView
   const showDialog = (chatDialogs) => {
     let dialogs = []
     for (let idx in chatDialogs) {
@@ -620,7 +643,7 @@ export function Home() {
       <CssBaseline />
 
       <NavBar
-        inputText={inputText} setInput={setInput}
+        inputText={inputText} setInput={setInput} errorState={errorState}
         messages={messages} handleNewDialog={handleNewDialog}
         handleMessages={handleMessages} deleteDialogs={deleteDialogs}
         revokeDialogs={revokeDialogs} regenerateDialogs={regenerateDialogs}
@@ -677,8 +700,8 @@ export function Home() {
         open={inputError}
         sx={{ width: "80%" }}
         anchorOrigin={{ vertical:'top', horizontal:'center' }}
-        autoHideDuration={1800}
-        onClose={()=>setInputError(false)}>
+        autoHideDuration={errorState? null:1800}
+        onClose={()=>errorState? null:setInputError(false)}>
         <Alert severity="error" sx={{ width: '100%' }}>
           {errorMsg}
         </Alert>

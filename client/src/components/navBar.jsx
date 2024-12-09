@@ -35,7 +35,6 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 
 
-
 // CSS
 import useStyles from '../css/style';
 
@@ -43,7 +42,7 @@ import useStyles from '../css/style';
 import { server, django, file_url } from '../api.js'
 
 const NavBar = ({
-    inputText, setInput,
+    inputText, setInput, errorState,
     messages, handleMessages,
     drawerOpen, setDrawerOpen,
     handleNewDialog, deleteDialogs, revokeDialogs, regenerateDialogs
@@ -98,19 +97,22 @@ const NavBar = ({
 
                 {/* 重新生成 */}
                 <Tooltip title={<h3>regenerate</h3>} placement="top" arrow>
-                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}} onClick={regenerateDialogs}>
+                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}}
+                    onClick={regenerateDialogs}>
                     <AutorenewIcon />
                 </IconButton>
                 </Tooltip>
                 {/* 撤回消息 */}
                 <Tooltip title={<h3>revoke</h3>} placement="top" arrow>
-                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}} onClick={revokeDialogs}>
+                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}}
+                    onClick={revokeDialogs}>
                     <ReplayIcon />
                 </IconButton>
                 </Tooltip>
                 {/* 清除消息 */}
                 <Tooltip title={<h3>clear</h3>} placement="top" arrow>
-                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}} onClick={deleteDialogs}>
+                <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2}}
+                    onClick={deleteDialogs}>
                     <DeleteForeverIcon />
                 </IconButton>
                 </Tooltip>
@@ -137,7 +139,8 @@ const NavBar = ({
                                 <InputAdornment position='end'>
                                     <IconButton
                                         aria-label='toggle password visibility'
-                                        onClick={inputText ? enterTextHanlder : null}>
+                                        onClick={inputText ? enterTextHanlder : null}
+                                        disabled={errorState}>
                                         <SendIcon color="secondary" />
                                     </IconButton>
                                 </InputAdornment>
@@ -145,7 +148,7 @@ const NavBar = ({
                         }}
                         onKeyDown={(ev) => {
                             if (ev.key === 'Enter') {
-                                if (inputText) {
+                                if (inputText && !errorState) {
                                     enterTextHanlder()
                                 }
                                 ev.preventDefault();
