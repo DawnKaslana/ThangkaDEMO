@@ -26,6 +26,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditOffIcon from '@mui/icons-material/EditOff';
 import EditIcon from '@mui/icons-material/Edit';
 import EditNoteIcon from '@mui/icons-material/EditNote';
+import TranslateIcon from '@mui/icons-material/Translate';
 
 // CSS
 import useStyles from '../css/style';
@@ -85,6 +86,7 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [deleteCheck, setDeleteCheck] = useState(false);
+  const [labelLang, setLabelLang] = useState('zh_CN');
 
   const [cellDialogOpen, setCellDialogOpen] = useState(false);
   const [openType, setOpenType] = useState();
@@ -265,9 +267,18 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
               </IconButton>
             </Tooltip>
             <Box sx={{flex:1}}/>
-            <Tooltip title={showEdit? <h3>edit</h3>:<h3>close edit</h3> } placement="bottom" arrow>
+            <Tooltip title={showEdit? <h3>edit</h3>:<h3>close edit</h3>} placement="bottom" arrow>
               <IconButton key={-2} edge="start" className={styles.tabIconButton} onClick={()=>setShowEdit(!showEdit)}>
                   {showEdit? <EditNoteIcon/>:<EditOffIcon/>}
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="切換標籤顯示語言" placement="bottom" arrow>
+              <IconButton key={-3}
+                edge="start"
+                className={styles.tabIconButton}
+                sx={{ml:.1}}
+                onClick={()=>setLabelLang(labelLang === 'zh_CN'?'en_US':'zh_CN')}>
+                  <TranslateIcon/>
               </IconButton>
             </Tooltip>
           </Box>
@@ -278,7 +289,9 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
               filteredLabels?.map((label, idx) => (
                 <Grid item xs={12} sm={6} md={3} lg={2} xl={1} xxl={1} key={idx}>
                   <Paper className={styles.paper} onClick={()=>showEdit&&label.user_id?handleCellFunc('label','edit',label):handleCellClick(label.value)} >
-                      <Box sx={{margin:'0 auto', maxWidth:'100%', wordWrap: 'break-word', textWrap: 'wrap'}}>{label.value}</Box>
+                      <Box sx={{margin:'0 auto', maxWidth:'100%', wordWrap: 'break-word', textWrap: 'wrap'}}>
+                        {labelLang === 'zh_CN' && label.zh_CN? label.zh_CN:label.value}
+                      </Box>
                       {showEdit && label.user_id? 
                         <EditIcon sx={{fontSize:20,verticalAlign:'middle',position:'absolute'}}/>
                       :null}

@@ -14,6 +14,19 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+
+// Icon import
+import DoubleArrowIcon from '@mui/icons-material/DoubleArrow';
+import ImageIcon from '@mui/icons-material/Image';
+import Filter1Icon from '@mui/icons-material/Filter1';
+import Filter2Icon from '@mui/icons-material/Filter2';
+import Filter3Icon from '@mui/icons-material/Filter2';
+import Filter4Icon from '@mui/icons-material/Filter2';
 
 // CSS
 import useStyles from '../css/style';
@@ -21,6 +34,7 @@ import { darkTheme } from '../css/theme.jsx';
 
 //other func & components
 import RViewerJS from 'viewerjs-react'
+import Viewer from 'viewerjs';
 import ReactMarkdown from 'react-markdown'
 import defaultImage from '../images/defaultImage.jpeg'
 import NavBar from '../components/navBar.jsx';
@@ -43,6 +57,12 @@ const preNegativePrompt = "bad,ugly,disfigured,blurry,watermark,normal quality,j
 
 const getRandomSeed = () => {
   return parseInt(Math.random()*(1000000000-1)+1)
+}
+
+const RVJSoptions = {
+  viewed() {
+    this.viewer.zoomTo(1.8);
+  },
 }
 
 //Main
@@ -92,8 +112,10 @@ export function Home() {
   const [selectedMask, setSelectedMask] = useState(undefined);
   const [selectedCNImg, setSelectedCNImg] = useState(undefined);
   const [selectedImgGCN, setSelectedImgGCN] = useState(undefined);
+  const [outputImgName, setOutputImgName] = useState(null);
+  const [imageSrc, setImageSrc] = useState(null);
   const [CNImgSrc, setCNImgSrc] = useState(null);
-  const [outputSrc, setOutputSrc] = useState(null);
+  
 
   // 讀取後端的模型狀態
   const getPipeType = () => {
@@ -202,7 +224,7 @@ export function Home() {
   }
 
   const optimizePrompt = (isClick) => {
-    console.log(isClick)
+    console.log('optimizePrompt'+isClick)
     if (prompt) {
       setGenerateState(true)
       const formData = new FormData();
@@ -225,6 +247,7 @@ export function Home() {
       }
     }
   }
+
 
   const generateHandler = (args) => {
     if (args.prompt) setPrompt(args.prompt)
@@ -266,16 +289,23 @@ export function Home() {
     const formData = new FormData();
     formData.append('prompt', args.prompt?args.prompt:prompt);
     formData.append('negativePrompt', negativePrompt);
-    formData.append('image', selectedImg);
-    formData.append('mask', selectedMask);
 
-    //if selectedCNImg = 'generated' 就不用送邊緣圖，送檔名，讓D直接讀edgedir
+    //if selectedCNImg = 'generated' 就不用送邊緣圖，送檔名，讓D直接讀edgeDir
     if (selectedCNImg?.generated) {
       formData.append('isGCN', true);
       formData.append('CNImage', selectedCNImg.generated);
     } else {
       formData.append('CNImage', selectedCNImg);
     }
+
+    if (selectedImg?.generated) {
+      formData.append('isGIM', true);
+      formData.append('image', selectedImg.generated);
+    } else {
+      formData.append('image', selectedImg);
+    }
+
+    formData.append('mask', selectedMask);
     formData.append('steps', steps);
     formData.append('seed', randomSeed<0?getRandomSeed():randomSeed);
     formData.append('strength', noiseRatio);
@@ -293,17 +323,19 @@ export function Home() {
   }
 
   const inpaintGenerate = (formData) => {
+    let filename = selectedImg.generated? 
+    selectedImg.generated.slice(0, -4) : selectedImg.name.slice(0, -4)
     django({ url: '/generate/', method: 'post', data: formData })
       .then(res => {
         if (res.data.msg === "successed") {
-          console.log(selectedImg.name.slice(0, -4) + "_output.png")
           django({
             url: '/getImg/', method: 'get', params: {
-              imageName: selectedImg.name.slice(0, -4) + "_output.png",
+              imageName: filename,
+              imageCount: imageCount,
               path:'output'
             }
           }).then(res => {
-            setOutputSrc(res.data.img)
+            setOutputImgName(filename)
             handleNewDialog({ type: 'output', src: res.data.img,
               pramas: formData})
             setGenerateState(false)
@@ -319,14 +351,14 @@ export function Home() {
     django({ url: '/generate/', method: 'post', data: formData })
       .then(res => {
         if (res.data.msg === "successed") {
-          console.log(filename + ".png")
           django({
             url: '/getImg/', method: 'get', params: {
-              imageName: filename + ".png",
+              imageName: filename,
+              imageCount: imageCount,
               path:'output'
             }
           }).then(res => {
-            setOutputSrc(res.data.img)
+            setOutputImgName(filename)
             handleNewDialog({ type: 'output', src: res.data.img,
               pramas: formData})
             setGenerateState(false)
@@ -336,17 +368,19 @@ export function Home() {
   }
 
   const img2imgGenerate = (formData) => {
+    let filename = selectedImg.generated? 
+    selectedImg.generated.slice(0, -4) : selectedImg.name.slice(0, -4)
     django({ url: '/generate/', method: 'post', data: formData })
       .then(res => {
         if (res.data.msg === "successed") {
-          console.log(selectedImg.name.slice(0, -4) + "_output.png")
           django({
             url: '/getImg/', method: 'get', params: {
-              imageName: selectedImg.name.slice(0, -4) + "_output.png",
+              imageName: filename,
+              imageCount: imageCount,
               path:'output'
             }
           }).then(res => {
-            setOutputSrc(res.data.img)
+            setOutputImgName(filename)
             handleNewDialog({ type: 'output', src: res.data.img,
               pramas: formData})
             setGenerateState(false)
@@ -354,6 +388,75 @@ export function Home() {
         }
       }).catch((err)=>setGenerateState(false))
   }
+
+  const sendImgtoSrc = (imgSrc, idx) => {
+    setImageSrc(imgSrc)
+    console.log(outputImgName+"_"+idx+".png")
+    setSelectedImg({'generated':outputImgName+"_"+idx+".png"})
+    handleSendImgMenuClose()
+  }
+
+  const [anchorEl, setAnchorEl] = useState(null);
+  const sendImgMenuOpen = Boolean(anchorEl);
+  const handleSendImgMenuClose = () => setAnchorEl(null);
+  const handleSendImgMenuClick = (event) => {
+    console.log('handleSendImgMenuClick')
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleSendImg = (e,images) => {
+    if (images.length === 1) sendImgtoSrc("data:image/png;base64," + images[0], 0)
+    else handleSendImgMenuClick(e)
+  }
+
+  const SendImgMenu = ({images}) => {
+    return <Menu
+      anchorEl={anchorEl}
+      id="send-img-menu"
+      open={sendImgMenuOpen}
+      onClose={handleSendImgMenuClose}
+      slotProps={{
+        paper: {
+          elevation: 0,
+          sx: {
+            overflow: 'visible',
+            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+            mt: 1.5,
+            '& .MuiAvatar-root': {
+              width: 32,
+              height: 32,
+              ml: -0.5,
+              mr: 1,
+            },
+            '&::before': {
+              content: '""',
+              display: 'block',
+              position: 'absolute',
+              top: 0,
+              right: 14,
+              width: 10,
+              height: 10,
+              bgcolor: 'background.paper',
+              transform: 'translateY(-50%) rotate(45deg)',
+              zIndex: 0,
+            },
+          },
+        },
+      }}
+      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+    >
+    {images.map((imgSrc,idx)=>
+      <MenuItem onClick={()=>sendImgtoSrc(imgSrc, idx)}>
+        <ListItemIcon>
+          <Filter1Icon fontSize="small" />
+        </ListItemIcon>
+      </MenuItem>
+      )
+    }
+    </Menu>
+  }
+
 
   const edgeGenerate = (imgforGCN) => {
     let image
@@ -370,14 +473,13 @@ export function Home() {
         .then(res => {
           if (res.data.msg === "successed") {
             let filename = image.name.slice(0, -4) + "_edge.png"
-            console.log(filename)
             django({
               url: '/getImg/', method: 'get', params: {
                 imageName: filename,
                 path: 'edge'
               }
             }).then(res => {
-              setCNImgSrc("data:image/png;base64," + res.data.img)
+              setCNImgSrc("data:image/png;base64," + res.data.img[0])
               setSelectedCNImg({'generated':filename})
               setGenerateState(false)
             })
@@ -427,13 +529,25 @@ export function Home() {
     </Box>
   )
 
-
   const outputDialog = (item, key) => (
     <Box key={key} display="flex" flexDirection="row" sx={{ mt: 1 }}>
       <AIAvatar/>
       <Card sx={{ p: 1, mr: 1 }}>
-        <Box><RViewerJS ><img src={"data:image/png;base64," + item.src} /></RViewerJS></Box>
-        <Box sx={{maxWidth:'500px'}}>
+        <Box>
+          {/* <RViewerJS options={{minWidth:512, movable:false, scalable:false}}> */}
+          <RViewerJS options={RVJSoptions} >
+            <Box className={classes.flexRow}>
+              {item.src[0]? <img id="images" src={"data:image/png;base64," + item.src[0]}/> : null}
+              {item.src[1]? <img src={"data:image/png;base64," + item.src[1]}/> : null}
+            </Box> 
+            <Box className={classes.flexRow}>
+              {item.src[2]? <img src={"data:image/png;base64," + item.src[2]}/> : null}
+              {item.src[3]? <img src={"data:image/png;base64," + item.src[3]}/> : null}
+            </Box> 
+          </RViewerJS>
+        </Box>
+
+        <Box sx={{maxWidth:item.src.length < 2 ? '512px': '1024px'}}>
           <Box className={classes.flexRow}>
             <Typography variant="body2" sx={{mr:1}} color="text.secondary">
               模式：{item.pramas.get('type')}
@@ -444,6 +558,18 @@ export function Home() {
             <Typography variant="body2" color="text.secondary">
               微調模型：{item.pramas.get('loraModelName')}
             </Typography>
+            { type !== 'text2img'?
+            <Tooltip title={<h3>Send image to input</h3>} placement="top" arrow>
+              <IconButton sx={{p:0, marginLeft:"auto", marginBottom:"auto"}} edge="start" color="inherit"
+                onClick={(e)=>handleSendImg(e,item.src)}>
+                <DoubleArrowIcon sx={{color: '#6A0DA0', transform: 'rotate(180deg)',}}/>
+                <ImageIcon sx={{color: '#6A0DA0'}}/>
+              </IconButton>
+            </Tooltip> : null
+            }
+            { type !== 'text2img'?
+            <SendImgMenu images={item.src}/> : null
+            }
           </Box>
           <Box className={classes.flexRow}>
             <Typography variant="body2" sx={{mr:1}} color="text.secondary">
@@ -455,6 +581,7 @@ export function Home() {
             <Typography variant="body2" sx={{mr:1}} color="text.secondary">
               文本權重：{item.pramas.get('guidance')}
             </Typography>
+            {/* if count > 1要多一行 */}
             <Typography variant="body2" color="text.secondary">
               隨機種子：{item.pramas.get('seed')}
             </Typography>
@@ -565,6 +692,7 @@ export function Home() {
         loading={loading} generateState={generateState} 
         setSelectedImg={setSelectedImg} setSelectedMask={setSelectedMask} setSelectedCNImg={setSelectedCNImg}
         setSelectedImgGCN={setSelectedImgGCN} 
+        imageSrc={imageSrc} setImageSrc={setImageSrc}
         CNImgSrc={CNImgSrc} setCNImgSrc={setCNImgSrc}
         setErrorMsg={setErrorMsg} setInputError={setInputError}
         logout={logout}

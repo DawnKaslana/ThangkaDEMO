@@ -7,13 +7,12 @@ from diffusers import StableDiffusionPipeline, StableDiffusionControlNetPipeline
     StableDiffusionImg2ImgPipeline, StableDiffusionControlNetImg2ImgPipeline, \
     StableDiffusionInpaintPipeline, StableDiffusionControlNetInpaintPipeline, \
     ControlNetModel, \
-    DDIMScheduler, DPMSolverMultistepScheduler, UniPCMultistepScheduler
+    DDIMScheduler, DPMSolverMultistepScheduler, UniPCMultistepScheduler, \
+    AutoPipelineForImage2Image
 import torch
 import time
 import numpy as np
 from skimage.feature import canny
-from diffusers.utils import load_image
-import cv2
 from PIL import Image, ImageChops, ImageOps, ImageFilter
 
 from . import images
@@ -157,9 +156,9 @@ def changeModel(generateType, model, cnModel=None,ft=False):
                 torch_dtype=torch.float16)
 
     if generateType == "img2img":
-        premodel_abspath = join(sd_model_path, model)
         if model not in SDList:
             model == "SD21"
+        premodel_abspath = join(sd_model_path, model)
         if str(cnModel) != 'None':
             cnmodel_abspath = join(cn_model_path, cnModel)
             controlnet = ControlNetModel.from_pretrained(
@@ -173,11 +172,15 @@ def changeModel(generateType, model, cnModel=None,ft=False):
             )
             pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
         else:
-            pipe = StableDiffusionImg2ImgPipeline.\
-                from_pretrained(
+            pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
                 premodel_abspath,
                 use_safetensors=True,
+                variant="fp16",
                 torch_dtype=torch.float16)
+
+            pipe.enable_attention_slicing()
+            # remove following line if xFormers is not installed or you have PyTorch 2.0 or higher installed
+            pipe.enable_xformers_memory_efficient_attention()
 
     return pipe
 
@@ -185,9 +188,9 @@ def changeModel(generateType, model, cnModel=None,ft=False):
 """
 presetting(loading) type & model
 """
-typeSet = "text2img" #inpaint text2img img2img
+typeSet = "img2img" #inpaint text2img img2img
 modelSet = "SD21" #inpaint:[CNI SDI2 SD21 SD15]
-cnModelSet = "control_sd21_canny" #None control_sd21_canny control_sd15_canny
+cnModelSet = "None" #None control_sd21_canny control_sd15_canny
 
 # load pipe first time
 pipe = changeModel(typeSet, modelSet, cnModelSet, ft=True)
@@ -260,19 +263,19 @@ def load_lora(loraModelName):
     else:
         pipe.unload_lora_weights()
 
-def inpaint(fileName, maskName, prompt, nagative_prompt,
+def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
             steps, seed, strength, guidance, imageCount, SDModel, CNImgName=None):
     # params check
     print('func: inpaint')
     print('prompt: ' + str(prompt))
-    print('fileName: ' + str(fileName))
+    print('fileName: ' + str(filename))
     print('maskName: ' + str(maskName))
     print('CNImgName: ' + str(CNImgName))
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
     # process image & mask  &  image_masked
-    image = Image.open(join(image_path, fileName)).convert("RGBA").resize((512,512))
+    image = Image.open(join(output_path if isGIM else image_path, filename)).convert("RGBA").resize((512,512))
     image_flat = images.flatten(image, "#ffffff")
     mask_image = Image.open(join(mask_path, maskName)).resize((512,512))
     bin_mask = images.create_binary_mask(mask_image)
@@ -311,7 +314,7 @@ def inpaint(fileName, maskName, prompt, nagative_prompt,
             guidance_scale=guidance,
             # controlnet_conditioning_scale=[1.0, 0.5]
             generator=generator,
-        ).images[0]
+        ).images
     else: #SDI2
         output = pipe(prompt=prompt,
             nagative_prompt=nagative_prompt,
@@ -323,30 +326,31 @@ def inpaint(fileName, maskName, prompt, nagative_prompt,
             guidance_scale=guidance,
             generator=generator,
             control_image=cnImg,
-            ).images[0]
-    # output.show()
-
-    newimage = Image.new('RGBA', image.size, (0, 0, 0, 0))
-
-    print(images.has_transparency(image))
-    if images.has_transparency(image):
-        newimage.paste(output, (0, 0))
-        image = images.MasktoTransparent(image, mask_image)
-        r, g, b, a = image.split()
-        a = a.filter(ImageFilter.MinFilter(3))
-        newimage.paste(image, (0, 0), mask=a) #ImageOps.invert(a)
-    else:
-        newimage.paste(image, (0, 0))
-        newimage.paste(output, (0, 0), mask=mask_image.convert('L'))
-
-    newimage.save(join(output_path, fileName[:-4] + "_output.png"))
+            ).images
 
 
+    for i in range(imageCount):
+        newimage = Image.new('RGBA', image.size, (0, 0, 0, 0))
+
+        # print(images.has_transparency(image))
+        if images.has_transparency(image):
+            newimage.paste(output[i], (0, 0))
+            image = images.MasktoTransparent(image, mask_image)
+            r, g, b, a = image.split()
+            a = a.filter(ImageFilter.MinFilter(3))
+            newimage.paste(image, (0, 0), mask=a) #ImageOps.invert(a)
+        else:
+            newimage.paste(image, (0, 0))
+            newimage.paste(output[i], (0, 0), mask=mask_image.convert('L'))
+
+        newimage.save(join(output_path, filename[:-4] + '_' + str(i) + ".png"))
 
 def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, CNImgName=None):
     print('func: text2img')
     print('prompt: ' + str(prompt))
+    print('filename: ' + filename)
     print('CNImgName: ' + str(CNImgName))
+    print('imageCount: ' + str(imageCount))
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
@@ -361,7 +365,7 @@ def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, 
             guidance_scale=guidance,
             image=cnImg,
             generator=generator,
-        ).images[0]
+        ).images
     else:
         output = pipe(
             prompt=prompt,
@@ -371,19 +375,23 @@ def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, 
             num_images_per_prompt=imageCount,
             guidance_scale=guidance,
             generator=generator,
-        ).images[0]
+        ).images
 
-    output.save(join(output_path,filename+".png"))
+    for i in range(imageCount):
+        output[i].save(join(output_path, filename + '_' + str(i) + ".png"))
 
-def img2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, CNImgName=None):
+
+
+
+def img2img(filename, isGIM, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, CNImgName=None):
     print('func: img2img')
     print('prompt: ' + str(prompt))
-    print('seed: '+str(seed))
+    print('filename: ' + filename)
     print('CNImgName: ' + str(CNImgName))
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
-    init_image = Image.open(join(image_path, filename)).resize((512, 512))
+    init_image = Image.open(join(output_path if isGIM else image_path, filename)).convert("RGBA").resize((512,512))
 
     if CNImgName:
         cnImg = Image.open(join(edge_path, CNImgName)).resize((512, 512))
@@ -401,7 +409,7 @@ def img2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, i
             guidance_scale=guidance,
             control_image=cnImg,
             generator=generator,
-        ).images[0]
+        ).images
     else:
         output = pipe(
             prompt=prompt,
@@ -412,8 +420,11 @@ def img2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, i
             num_images_per_prompt=imageCount,
             guidance_scale=guidance,
             generator=generator,
-        ).images[0]
-    output.save(join(output_path,filename[:-4]+"_output.png"))
+        ).images
+
+    for i in range(imageCount):
+        output[i].save(join(output_path, filename[:-4] + '_' + str(i) + ".png"))
+
 
 def img2text():
     print("")

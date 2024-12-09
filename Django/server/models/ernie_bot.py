@@ -167,7 +167,7 @@ def generateImgByErnie(prompt):
 def refineByErnie(text):
     messages = [{
         "role": "user",
-        "content": "從'" + text + "'中擷取關於圖像的描述並進行優化，使生成效果更好，只輸出優化後的圖像描述文本（不要太長）"
+        "content": "從'" + text + "'中擷取關於圖像的描述並進行優化，使生成效果更好，最後只輸出圖像描述文本（不要太長）"
     }]
 
     response = erniebot.ChatCompletion.create(

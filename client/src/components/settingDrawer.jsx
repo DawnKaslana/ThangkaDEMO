@@ -111,6 +111,7 @@ const SettingDrawer = ({ open,
   imageCount, setImageCount,
   steps, setSteps,
   loading, generateState,
+  imageSrc, setImageSrc,
   CNImgSrc, setCNImgSrc,
   setSelectedImg, setSelectedMask, setSelectedCNImg, 
   setSelectedImgGCN, 
@@ -125,7 +126,6 @@ const SettingDrawer = ({ open,
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
   // img Src
-  const [imageSrc, setImageSrc] = useState(null);
   const [maskSrc, setMaskSrc] = useState(null);
   const inputImgRef = useRef();
   const inputMaskRef = useRef();
@@ -177,6 +177,7 @@ const SettingDrawer = ({ open,
       setCNImgSrc(null)
       setSelectedCNImg(undefined)
       if (inputCNRef.current) inputCNRef.current.value = ''
+      if (inputImgforGCNRef.current) inputImgforGCNRef.current.value = ''
     }
   }
 
@@ -225,6 +226,10 @@ const SettingDrawer = ({ open,
   const handleChangeSteps = (value) =>{
     //設置上限
     value <= 200 ? setSteps(value) : setSteps(200)
+  }
+
+  const setDisable = (val) => {
+    return
   }
 
   const Options = () => {
@@ -305,7 +310,9 @@ const SettingDrawer = ({ open,
             onChange={(e)=>selectImgHandler(e,"img")} />
           {imageSrc?
           <Box sx={{position:"absolute"}}>
-            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={imageSrc} /></RViewerJS>
+            <RViewerJS sx={{position:"absolute"}}>
+              <img height="200px" src={imageSrc} alt="uploaded image"/>
+            </RViewerJS>
           </Box>: null}
           {!imageSrc?
           <IconButton onClick={handleOnClickImgUpload}>
@@ -329,9 +336,13 @@ const SettingDrawer = ({ open,
             ref={inputMaskRef}
             type="file" accept="image/*"
             onChange={(e)=>selectImgHandler(e,"mask")} />
+            <IconButton disabled={generateState} sx={{ml: 1}} 
+              onClick={type==='inpaint'?edgeGenerate:handleOnClickImgGCNUpload}>
+              <AutoModeIcon/>
+            </IconButton>
           {maskSrc?
           <Box sx={{position:"absolute"}}>
-            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={maskSrc} /></RViewerJS>
+            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={maskSrc}/></RViewerJS>
           </Box>: null}
           {!maskSrc?
           <IconButton onClick={handleOnClickMaskUpload}>
@@ -345,9 +356,6 @@ const SettingDrawer = ({ open,
               <AddBoxOutlinedIcon />
             </IconButton>
           </Box>}
-
-
-
         </Box>:null}
 
         {/* 上傳CNimg */}
@@ -359,7 +367,8 @@ const SettingDrawer = ({ open,
             ref={inputImgforGCNRef}
             type="file" accept="image/*"
             onChange={(e)=>selectImgHandler(e,"gcn")} />
-            <IconButton disabled={generateState} sx={{ml: 1}} onClick={type==='inpaint'?edgeGenerate:handleOnClickImgGCNUpload}>
+            <IconButton disabled={generateState} sx={{ml: 1}} 
+              onClick={type==='inpaint'?edgeGenerate:handleOnClickImgGCNUpload}>
               <AutoModeIcon/>
             </IconButton>
           </Box>}
@@ -370,7 +379,7 @@ const SettingDrawer = ({ open,
             onChange={(e)=>selectImgHandler(e,"cn")} />
           {CNImgSrc?
           <Box sx={{position:"absolute"}}>
-            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={CNImgSrc} /></RViewerJS>
+            <RViewerJS sx={{position:"absolute"}}><img height="200px" src={CNImgSrc}/></RViewerJS>
           </Box>: null}
           {!CNImgSrc?
             <IconButton onClick={handleOnClickCNUpload}>

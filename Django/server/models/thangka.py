@@ -22,7 +22,8 @@ def test(request):
 #@csrf_exempt
 def generate(request):
     if request.method == 'POST':
-        imagefile = request.FILES.get("image")
+        isGIM = request.POST.get("isGIM")
+        imagefile = request.POST.get("image") if isGIM else request.FILES.get("image")
         maskfile = request.FILES.get("mask")
         isGCN = request.POST.get("isGCN")
         CNImagefile = request.POST.get("CNImage") if isGCN else request.FILES.get("CNImage")
@@ -46,27 +47,33 @@ def generate(request):
         strength = eval(strength)
         guidance = eval(guidance)
         imageCount = eval(imageCount)
+
         if isGCN:
             CNImgName = CNImagefile
         elif CNImagefile:
-            with open(join('./server/media/edge', CNImagefile.name), 'wb') as fp:
+            CNImgName = CNImagefile.name
+            with open(join('./server/media/edge', CNImgName), 'wb') as fp:
                 for chunk in CNImagefile.chunks():
                     fp.write(chunk)
-            CNImgName = CNImagefile.name
         else:
             CNImgName = None
+
+        if isGIM:
+            imagefileName = imagefile
+        elif imagefile:
+            imagefileName = imagefile.name
+            with open(join('./server/media/image', imagefileName), 'wb') as fp:
+                for chunk in imagefile.chunks():
+                    fp.write(chunk)
 
         diffusion.load_lora(loraModel)
 
         if type == "inpaint":
-            with open(join('./server/media/image', imagefile.name), 'wb') as fp:
-                for chunk in imagefile.chunks():
-                    fp.write(chunk)
             with open(join('./server/media/mask', maskfile.name), 'wb') as fp:
                 for chunk in maskfile.chunks():
                     fp.write(chunk)
 
-            diffusion.inpaint(fileName=imagefile.name,
+            diffusion.inpaint(filename=imagefileName, isGIM=isGIM,
                               maskName=maskfile.name,
                               prompt=prompt, nagative_prompt=negativePrompt,
                               steps=steps, seed=seed,
@@ -87,16 +94,12 @@ def generate(request):
             return JsonResponse({'msg': "successed"})
 
         if type == "img2img":
-            with open(join('./server/media/image', imagefile.name), 'wb') as fp:
-                for chunk in imagefile.chunks():
-                    fp.write(chunk)
-
             diffusion.img2img(prompt=prompt,
                               negativePrompt=negativePrompt,
                               steps=steps, seed=seed,
                               strength=strength, guidance=guidance,
                               imageCount=imageCount,
-                              filename=imagefile.name,
+                              filename=imagefileName, isGIM=isGIM,
                               CNImgName=CNImgName)
             return JsonResponse({'msg': "successed"})
 
@@ -120,12 +123,25 @@ def send_img(request):
     if request.method == 'GET':
         filename = request.GET.get("imageName")
         path = request.GET.get("path")
-        result={}
+        count = request.GET.get("imageCount")
         filepath = join('./server/media/', path)
-        with open(join(filepath, filename), 'rb') as f:
-            data = f.read()
-            result["img"] = bytes.decode(base64.b64encode(data))
-            return JsonResponse(result)
+
+        result = {'img':[]}
+
+        if count:
+            for i in range(int(count)):
+                file = filename + '_' + str(i) + '.png'
+                with open(join(filepath, file), 'rb') as f:
+                    data = f.read()
+                    result['img'].append(bytes.decode(base64.b64encode(data)))
+        else:
+            with open(join(filepath, filename), 'rb') as f:
+                data = f.read()
+                result['img'].append(bytes.decode(base64.b64encode(data)))
+
+        return JsonResponse(result)
+
+
 
 
 def changePipe(request):
