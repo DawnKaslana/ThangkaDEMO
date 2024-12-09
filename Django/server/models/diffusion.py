@@ -175,12 +175,7 @@ def changeModel(generateType, model, cnModel=None,ft=False):
             pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
                 premodel_abspath,
                 use_safetensors=True,
-                variant="fp16",
                 torch_dtype=torch.float16)
-
-            pipe.enable_attention_slicing()
-            # remove following line if xFormers is not installed or you have PyTorch 2.0 or higher installed
-            pipe.enable_xformers_memory_efficient_attention()
 
     return pipe
 
@@ -292,6 +287,8 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
 
     if CNImgName:
         cnImg = Image.open(join(edge_path, CNImgName)).resize((512, 512))
+        if cnImg.mode != 'L' and cnImg.mode != '1':
+            cnImg = images.canny_image(cnImg)
     else:
         cnImg = None
 
@@ -356,6 +353,9 @@ def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, 
 
     if CNImgName:
         cnImg = Image.open(join(edge_path, CNImgName)).resize((512, 512))
+        if cnImg.mode != 'L' and cnImg.mode != '1':
+            cnImg = images.canny_image(cnImg)
+
         output = pipe(
             prompt=prompt,
             negative_prompt=negativePrompt,
@@ -386,16 +386,16 @@ def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, 
 def img2img(filename, isGIM, prompt, negativePrompt, steps, seed, strength, guidance, imageCount, CNImgName=None):
     print('func: img2img')
     print('prompt: ' + str(prompt))
+    print('isGIM: ' + str(isGIM))
     print('filename: ' + filename)
     print('CNImgName: ' + str(CNImgName))
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
-    init_image = Image.open(join(output_path if isGIM else image_path, filename)).convert("RGBA").resize((512,512))
+    init_image = Image.open(join(output_path if isGIM else image_path, filename)).resize((512,512))
 
     if CNImgName:
         cnImg = Image.open(join(edge_path, CNImgName)).resize((512, 512))
-
         if cnImg.mode != 'L' and cnImg.mode != '1':
             cnImg = images.canny_image(cnImg)
 
