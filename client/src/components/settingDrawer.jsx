@@ -56,6 +56,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DoneIcon from '@mui/icons-material/Done';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import GTranslateIcon from '@mui/icons-material/GTranslate';
+import BrushIcon from '@mui/icons-material/Brush';
 
 // other func import
 import RViewerJS from 'viewerjs-react'
@@ -64,6 +65,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw';
 import ReactImgEditor from 'react-img-editor'
+// import { Stage, Layer, Rect } from 'react-konva';
+import Konva from "konva";
 
 // CSS
 import useStyles from '../css/style';
@@ -142,6 +145,7 @@ const SettingDrawer = ({ open,
 
   // img Src
   const [maskSrc, setMaskSrc] = useState(null);
+  const [editImgSrc, setEditImgSrc] = useState(null);
   const inputImgRef = useRef();
   const inputMaskRef = useRef();
   const inputCNRef = useRef();
@@ -198,9 +202,9 @@ const SettingDrawer = ({ open,
     }
   }
 
-  const preview = (event, type) => {
+  const preview = (event, type, func) => {
     let file;
-    if (type === "editimg" || type === "editmask"){
+    if (func === "make" || func === "edit"){
       file = event;
     } else {
       file = event.target.files[0];
@@ -210,8 +214,8 @@ const SettingDrawer = ({ open,
 
     reader.addEventListener('load', function () {
       // convert image file to base64 string
-      if(type === "img" || type === "editimg") setImageSrc(reader.result)
-      else if(type === "mask"  || type === "editmask") setMaskSrc(reader.result)
+      if(type === "img") setImageSrc(reader.result)
+      else if(type === "mask") setMaskSrc(reader.result)
       else if(type === "cn") setCNImgSrc(reader.result)
     }, false);
 
@@ -328,8 +332,8 @@ const SettingDrawer = ({ open,
             <Typography variant="h6" mt={2}>上傳图片</Typography>
             <Box sx={{flexGrow:1}}/>
             <IconButton sx={{ml: 1}} 
-              onClick={()=>setEditImgOpen('editimg')}>
-              <AutoModeIcon/>
+              onClick={()=>handleClickEditImg('edit','img')}>
+              <BrushIcon/>
             </IconButton>
           </Box>}
         { type === 'text2img'? null: <Box className={classes.imgBox}>
@@ -363,7 +367,11 @@ const SettingDrawer = ({ open,
             <Typography variant="h6" mt={1}>上傳遮罩</Typography>
             <Box sx={{flexGrow:1}}/>
             <IconButton sx={{ml: 1}} 
-              onClick={()=>setEditImgOpen('editmask')}>
+              onClick={()=>handleClickEditImg('edit','mask')}>
+              <BrushIcon/>
+            </IconButton>
+            <IconButton sx={{ml: 1}} 
+              onClick={()=>handleClickEditImg('make','mask')}>
               <AutoModeIcon/>
             </IconButton>
           </Box> : null}
@@ -553,7 +561,6 @@ const SettingDrawer = ({ open,
           onChange={(e) => setNegativePrompt(e.target.value)}
           style={{ width: '100%', padding: '10px', marginBottom: '15px' }}
         />
-
       </Box>
     )
   }
@@ -593,17 +600,46 @@ const SettingDrawer = ({ open,
   )
 
   const stageRef = useRef()
-  
   const setStage = (stage) => {
     stageRef.current = stage
   }
 
+  const handleClickEditImg = (func, type) => {
+    setEditImgOpen([func, type])
+    if (type === 'img') setEditImgSrc(imageSrc)
+    if (type === 'mask' && func === 'make') setEditImgSrc(imageSrc)  
+    if (type === 'mask' && func === 'edit') setEditImgSrc(maskSrc)
+  }
+  
   const handleDoneEditImg = () => {
+    let func = editImgOpen[0]
+    let type = editImgOpen[1]
+    // if editmask add black layer at bottom
+    if (func === 'make' && type === 'mask') {
+      var drawLayer = stageRef.current.getLayers()[1]
+      drawLayer.cache()
+      drawLayer.filters([Konva.Filters.RGB, Konva.Filters.Invert]);
+      drawLayer.blue(0)
+      drawLayer.red(0)
+      drawLayer.green(0)
+      var maskLayer = new Konva.Layer()
+      var rect = new Konva.Rect({
+        x: 0, y: 0,
+        width: stageRef.current.getAttr('width'),
+        height: stageRef.current.getAttr('height'),
+        fill: 'black',
+      });
+      maskLayer.add(rect);
+      stageRef.current.removeChildren()
+      stageRef.current.add(maskLayer)
+      stageRef.current.add(drawLayer)
+    }
+
     const canvas = stageRef.current.clearAndToCanvas({ pixelRatio: stageRef.current._pixelRatio })
     canvas.toBlob(function(blob) {
-      preview(blob, editImgOpen)
-      console.log(blob)
-      setSelectedImg(blob)
+      preview(blob, type, func)
+      if (type === 'mask') setSelectedMask(blob)
+      if (type === 'img') setSelectedImg(blob)
     }, 'image/png')
     setEditImgOpen(false)
   }
@@ -613,14 +649,15 @@ const SettingDrawer = ({ open,
     aria-labelledby="make-image-dialog"
     open={Boolean(editImgOpen)}
     maxWidth='lg'
-    // fullWidth
     sx={{zIndex:10}}
     >
       <DialogTitle sx={{ m: 0, p: 2, fontSize:'2em' }} id="EditImg">
-        {editImgOpen === 'editimg'? '編輯圖像' : '製作遮罩'}
+        {editImgOpen[0] === 'edit'? '編輯' : '製作'}
+        {editImgOpen[1] === 'img'? '圖像' : '遮罩'}
       </DialogTitle>
       <IconButton
         aria-label="done"
+        disabled={!Boolean(editImgSrc)}
         onClick={handleDoneEditImg}
         sx={{ position: 'absolute', right: 50, top: 8, color: '#00A600' }}
       >
@@ -635,9 +672,9 @@ const SettingDrawer = ({ open,
       </IconButton>
       <DialogContent dividers sx={{margin:'0 auto'}}>
           <ReactImgEditor
-            src={imageSrc}
-            toolbar={editImgToolbar}
-            getStage={setStage}/>
+          src={editImgSrc?editImgSrc:""}
+          toolbar={editImgToolbar}
+          getStage={setStage}/>
       </DialogContent>
     </Dialog>
   )
@@ -677,7 +714,6 @@ const SettingDrawer = ({ open,
 
 
   return (
-    
     <Drawer
       variant="permanent"
       className={clsx(classes.drawer, {

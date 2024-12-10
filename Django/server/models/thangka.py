@@ -76,12 +76,19 @@ def generate(request):
         diffusion.load_lora(loraModel)
 
         if type == "inpaint":
-            with open(join('./server/media/mask', maskfile.name), 'wb') as fp:
-                for chunk in maskfile.chunks():
-                    fp.write(chunk)
+            if maskfile:
+                if maskfile.name == 'blob':
+                    maskFilename = str(int(time.time())) + '.png'
+                    print('maskFilename:', maskFilename)
+                else:
+                    maskFilename = maskfile.name
+
+                with open(join('./server/media/mask', maskFilename), 'wb') as fp:
+                    for chunk in maskfile.chunks():
+                        fp.write(chunk)
 
             outputName = diffusion.inpaint(filename=imagefileName, isGIM=isGIM,
-                              maskName=maskfile.name,
+                              maskName=maskFilename,
                               prompt=prompt, nagative_prompt=negativePrompt,
                               steps=steps, seed=seed,
                               strength=strength, guidance=guidance,

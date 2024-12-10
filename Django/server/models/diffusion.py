@@ -178,7 +178,7 @@ def changeModel(generateType, model, cnModel=None,ft=False):
                 use_safetensors=True,
                 torch_dtype=torch.float16)
 
-    pipe.enable_model_cpu_offload()
+    # pipe.enable_model_cpu_offload()
     # remove following line if xFormers is not installed or you have PyTorch 2.0 or higher installed
     pipe.enable_xformers_memory_efficient_attention()
 
@@ -188,8 +188,8 @@ def changeModel(generateType, model, cnModel=None,ft=False):
 """
 preloading type & model
 """
-typeSet = "img2img" #inpaint text2img img2img
-modelSet = "SD21" #inpaint:[CNI SDI2] SD:[SD21 SD15]
+typeSet = "inpaint" #inpaint text2img img2img
+modelSet = "CNI" #inpaint:[CNI SDI2] SD:[SD21 SD15]
 cnModelSet = "None" #None control_sd21_canny control_sd15_canny
 
 # load pipe first time
