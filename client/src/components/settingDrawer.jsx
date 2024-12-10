@@ -65,7 +65,6 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw';
 import ReactImgEditor from 'react-img-editor-en'
-
 import Konva from 'konva';
 
 // CSS
@@ -156,7 +155,7 @@ const SettingDrawer = ({ open,
   const [helpContent, setHelpContent] = useState('')
   const [editImgOpen, setEditImgOpen] = useState(false)
 
-  // control Img Upload: selectImgHandler, clearImg, preview
+  // control Img Upload and Show: selectImgHandler, clearImg, preview
   const handleOnClickImgUpload = () => { inputImgRef.current.click(); };
   const handleOnClickMaskUpload = () => { inputMaskRef.current.click(); };
   const handleOnClickCNUpload = () => { inputCNRef.current.click(); };
@@ -205,7 +204,7 @@ const SettingDrawer = ({ open,
 
   const preview = (event, type, func) => {
     let file;
-    if (func === "make" || func === "edit"){
+    if (func){
       file = event;
     } else {
       file = event.target.files[0];
@@ -490,7 +489,7 @@ const SettingDrawer = ({ open,
           step={0.01}
           onChange={(e, newValue) => setNoiseRatio(newValue)}
           valueLabelDisplay="auto"
-          sx={{color: '#800080'}}
+          color="secondary"
         />
         <Typography variant="body2">当前噪声比例: {noiseRatio}</Typography>
 
@@ -503,7 +502,7 @@ const SettingDrawer = ({ open,
           step={0.1}
           onChange={(e, newValue) => setPromptWeight(newValue)}
           valueLabelDisplay="auto"
-          sx={{color: '#800080'}}
+          color="secondary"
         />
         <Typography variant="body2" mb={2}>当前提示权重: {promptWeight}</Typography>
 
@@ -611,7 +610,7 @@ const SettingDrawer = ({ open,
     if (type === 'mask' && func === 'make') setEditImgSrc(imageSrc)  
     if (type === 'mask' && func === 'edit') setEditImgSrc(maskSrc)
   }
-  
+
   const handleDoneEditImg = () => {
     let func = editImgOpen[0]
     let type = editImgOpen[1]
@@ -652,22 +651,50 @@ const SettingDrawer = ({ open,
     const canvas = stageRef.current.clearAndToCanvas({ pixelRatio: stageRef.current._pixelRatio })
     canvas.toBlob(function(blob) {
       preview(blob, type, func)
-      if (type === 'mask') setSelectedMask(blob)
-      if (type === 'img') setSelectedImg(blob)
+      if (type === 'mask') {
+        inputMaskRef.current.value = ""
+        setSelectedMask(blob)
+      }
+      if (type === 'img') {
+        inputImgRef.current.value = ""
+        setSelectedImg(blob)
+      }
     }, 'image/png')
     setEditImgOpen(false)
   }
 
-  const EditImgDialog = () => (
-    <Dialog
+  const EditImgDialog = () => {
+    const [blurMaskRatio, setBlurMaskRatio] = useState(0);
+    const func =  editImgOpen[0]
+    const type =  editImgOpen[1]
+
+    const handleBlurImg = (e, value) => {
+    
+      let layer = stageRef.current.getLayers()[0]
+      let drawLayer = stageRef.current.getLayers()[1]
+
+      layer.cache()
+      layer.filters([Konva.Filters.Blur]);
+      layer.blurRadius(value)
+
+      if (drawLayer) {
+        drawLayer.cache()
+        drawLayer.filters([Konva.Filters.Blur]);
+        drawLayer.blurRadius(value)
+      }
+      setBlurMaskRatio(value)
+
+    }
+
+    return <Dialog
     aria-labelledby="make-image-dialog"
     open={Boolean(editImgOpen)}
     maxWidth='lg'
     sx={{zIndex:10}}
     >
       <DialogTitle sx={{ m: 0, p: 2, fontSize:'2em' }} id="EditImg">
-        {editImgOpen[0] === 'edit'? '編輯' : '製作'}
-        {editImgOpen[1] === 'img'? '圖像' : '遮罩'}
+        {func === 'edit'? '編輯' : '製作'}
+        {type === 'img'? '圖像' : '遮罩'}
       </DialogTitle>
       <IconButton
         aria-label="done"
@@ -685,13 +712,26 @@ const SettingDrawer = ({ open,
         <CloseIcon />
       </IconButton>
       <DialogContent dividers sx={{margin:'0 auto'}}>
+      {editImgSrc&&type==='mask'&&func==='edit'?
+        <Box className={classes.flexRow} sx={{mb:1}}>
+          <Typography variant="h6" width="25%">遮罩模糊程度</Typography>
+          <Slider
+              value={blurMaskRatio}
+              min={0}
+              max={5}
+              step={1}
+              onChange={handleBlurImg}
+              color="disabled"
+              sx={{color:"gray",marginRight:"auto", width:"50%"}}
+            />
+        </Box>: null}
           <ReactImgEditor
           src={editImgSrc?editImgSrc:""}
           toolbar={editImgToolbar}
           getStage={setStage}/>
       </DialogContent>
     </Dialog>
-  )
+  }
 
   // 翻譯選項菜單: handleTranslateClick/Close
   // 翻譯功能: translate

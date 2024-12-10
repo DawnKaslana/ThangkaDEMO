@@ -15,7 +15,7 @@ import time
 import numpy as np
 from skimage.feature import canny
 from PIL import Image, ImageChops, ImageOps, ImageFilter
-
+import cv2
 from . import images
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
@@ -282,17 +282,12 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
     image = Image.open(join(output_path if isGIM else image_path, filename)).convert("RGBA").resize((512,512))
     image_flat = images.flatten(image, "#ffffff")
     mask_image = Image.open(join(mask_path, maskName)).resize((512,512))
+    kernel = np.ones((3, 3), np.uint8)
+    test = cv2.dilate(np.array(mask_image), kernel, iterations=1)
+    test = Image.fromarray(test)
+    # test.show()
     bin_mask = images.create_binary_mask(mask_image)
     image_fill = images.fill(image_flat, bin_mask) #通過模糊填充周圍顏色
-    np_mask = np.array(bin_mask)
-    np_mask = (np_mask > 0).astype(np.uint8) * 255
-
-    # print("mask_image.mode:" + mask_image.mode)
-
-    if mask_image.mode == "RGBA":
-        use_mask = np_mask
-    else:
-        use_mask = mask_image
 
     if CNImgName:
         cnImg = Image.open(join(edge_path, CNImgName)).resize((512, 512))
@@ -324,8 +319,8 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
     else: #SDI2
         output = pipe(prompt=prompt,
             nagative_prompt=nagative_prompt,
-            image=image_fill, #image_fill
-            mask_image=use_mask, #np_mask or not np
+            image=image_fill, #image_fill image
+            mask_image=test,
             num_inference_steps=steps,
             strength=strength,#(0~1)
             num_images_per_prompt=imageCount,
@@ -344,6 +339,7 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
 
     for i in range(imageCount):
         newimage = Image.new('RGBA', image.size, (0, 0, 0, 0))
+        # output[i].show()
 
         # print(images.has_transparency(image))
         if images.has_transparency(image):

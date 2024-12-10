@@ -46,7 +46,7 @@ import loadImg from '../images/purpleLoader-crop.gif'
 import { server, django, file_url } from '../api.js'
 
 // Test params
-const isTest = true;
+const isTest = false;
 
 
 // cookie
