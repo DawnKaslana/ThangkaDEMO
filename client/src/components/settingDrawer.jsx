@@ -64,13 +64,13 @@ import LinearWithValueLabelProgress from './progress.jsx'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw';
-import ReactImgEditor from 'react-img-editor'
-// import { Stage, Layer, Rect } from 'react-konva';
-import Konva from "konva";
+import ReactImgEditor from 'react-img-editor-en'
+
+import Konva from 'konva';
 
 // CSS
 import useStyles from '../css/style';
-import 'react-img-editor/assets/index.css'
+import 'react-img-editor-en/assets/index.css'
 
 // api
 import { server, django, file_url } from '../api.js'
@@ -112,7 +112,7 @@ const RVJSoptions = {
   },
 }
 const editImgToolbar = { items: [
-  // 'zoomIn','zoomOut', '|',
+  'zoomIn','zoomOut', '|',
   'pen', 'eraser', 'arrow', 'rect', 'circle', '|',
   'repeal', 'download', 'crop',]
 }
@@ -162,7 +162,8 @@ const SettingDrawer = ({ open,
   const handleOnClickCNUpload = () => { inputCNRef.current.click(); };
   const handleOnClickImgGCNUpload = () => { inputImgforGCNRef.current.click(); };
   const selectImgHandler = (event, type) => {
-    let filename = event.target.files[0].name
+    let filename = event.target.files[0]?.name
+    if (!filename) return
     let ext = filename.substring(filename.lastIndexOf('.'));
     if (ext !== '.png' && ext !== '.jpg' && ext !== '.jpeg'){
       setInputError(true)
@@ -614,24 +615,37 @@ const SettingDrawer = ({ open,
   const handleDoneEditImg = () => {
     let func = editImgOpen[0]
     let type = editImgOpen[1]
-    // if editmask add black layer at bottom
+    // if make mask add black layer at bottom
     if (func === 'make' && type === 'mask') {
-      var drawLayer = stageRef.current.getLayers()[1]
-      drawLayer.cache()
-      drawLayer.filters([Konva.Filters.RGB, Konva.Filters.Invert]);
-      drawLayer.blue(0)
-      drawLayer.red(0)
-      drawLayer.green(0)
-      var maskLayer = new Konva.Layer()
-      var rect = new Konva.Rect({
+      // add black layer at bottom
+      var maskLayer = new Konva.Layer();
+      let rect = new Konva.Rect({
         x: 0, y: 0,
         width: stageRef.current.getAttr('width'),
         height: stageRef.current.getAttr('height'),
         fill: 'black',
       });
       maskLayer.add(rect);
+      // get drawing layer
+      let drawLayer = stageRef.current.getLayers()[1]
+      drawLayer.cache()
+      drawLayer.filters([Konva.Filters.RGB, Konva.Filters.Invert]);
+      drawLayer.blue(0)
+      drawLayer.red(0)
+      drawLayer.green(0)
+      // add to stage
       stageRef.current.removeChildren()
       stageRef.current.add(maskLayer)
+      stageRef.current.add(drawLayer)
+    }
+
+    if (func === 'edit' && type === 'mask') {
+      let drawLayer = stageRef.current.getLayers()[1]
+      drawLayer.cache()
+      drawLayer.filters([Konva.Filters.RGB, Konva.Filters.Invert]);
+      drawLayer.blue(0)
+      drawLayer.red(0)
+      drawLayer.green(0)
       stageRef.current.add(drawLayer)
     }
 
