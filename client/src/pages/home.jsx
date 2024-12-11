@@ -25,8 +25,8 @@ import DoubleArrowIcon from '@mui/icons-material/DoubleArrow';
 import ImageIcon from '@mui/icons-material/Image';
 import Filter1Icon from '@mui/icons-material/Filter1';
 import Filter2Icon from '@mui/icons-material/Filter2';
-import Filter3Icon from '@mui/icons-material/Filter2';
-import Filter4Icon from '@mui/icons-material/Filter2';
+import Filter3Icon from '@mui/icons-material/Filter3';
+import Filter4Icon from '@mui/icons-material/Filter4';
 
 // CSS
 import useStyles from '../css/style';

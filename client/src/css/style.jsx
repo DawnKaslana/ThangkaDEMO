@@ -125,10 +125,10 @@ const useStyles = makeStyles((theme) => ({
       justifyContent:'end',
       padding: theme.spacing(1.8),
       textAlign: 'center',
-      color: '#4F4F4F',
+      color: 'black !important',
       cursor: 'pointer',
       fontSize: '1.2em',
-      backgroundColor: 'pink',
+      backgroundColor: 'pink !important',
       fontWeight:'500',
       '&:hover': {
         color:'black',
