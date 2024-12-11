@@ -33,10 +33,11 @@ export HUGGINGFACE_HUB_CACHE=/media/brl2022-1/brl2022-1-1/xty/huggingface/hub/
 presetting
 """
 edge_connect_dir = "/mnt/Workspace/edge-connect"
-sd_model_path = "/mnt/Workspace/SDmodels/"
-cn_model_path = "/mnt/Workspace/SDmodels/CN"
-lora_model_path = "/mnt/Workspace/SDmodels/Lora/"
-edge_model_path = "/mnt/Workspace/SDmodels/edge/"
+model_rootpath = "/mnt/Workspace/models/"
+cn_model_path = join(model_rootpath, "CN")
+lora_model_path = join(model_rootpath, "Lora")
+edge_model_path = join(model_rootpath, "edge")
+# 圖片上傳存放的路徑
 filePath = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media"
 image_path = join(filePath, "image")
 mask_path = join(filePath, "mask")
@@ -88,7 +89,7 @@ def changeModel(generateType, model, cnModel=None,ft=False):
 
     if generateType == "inpaint":
         if model == "CNI":
-            premodel_abspath = join(sd_model_path, "SD15")
+            premodel_abspath = join(model_rootpath, "SD15")
             CNI_abspath = join(cn_model_path, "control_sd15_inpaint")
             CNI_controlnet = ControlNetModel.from_pretrained(
                 CNI_abspath,
@@ -117,7 +118,7 @@ def changeModel(generateType, model, cnModel=None,ft=False):
                 )
             pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
         else: #SDI2
-            premodel_abspath = join(sd_model_path, model)
+            premodel_abspath = join(model_rootpath, model)
             if str(cnModel) != 'None':
                 cnmodel_abspath = join(cn_model_path, cnModel)
                 controlnet = ControlNetModel.from_pretrained(
@@ -137,7 +138,7 @@ def changeModel(generateType, model, cnModel=None,ft=False):
                     torch_dtype=torch.float16)
 
     if generateType == "text2img":
-        premodel_abspath = join(sd_model_path, model)
+        premodel_abspath = join(model_rootpath, model)
         if str(cnModel) != 'None' and cnModel.split('_')[1] == SDVersion[modelSet]:
             cnmodel_abspath = join(cn_model_path, cnModel)
             controlnet = ControlNetModel.from_pretrained(
@@ -159,7 +160,7 @@ def changeModel(generateType, model, cnModel=None,ft=False):
     if generateType == "img2img":
         if model not in SDList:
             model == "SD21"
-        premodel_abspath = join(sd_model_path, model)
+        premodel_abspath = join(model_rootpath, model)
         if str(cnModel) != 'None':
             cnmodel_abspath = join(cn_model_path, cnModel)
             controlnet = ControlNetModel.from_pretrained(
@@ -188,7 +189,7 @@ def changeModel(generateType, model, cnModel=None,ft=False):
 """
 preloading type & model
 """
-typeSet = "inpaint" #inpaint text2img img2img
+typeSet = "text2img" #inpaint text2img img2img
 modelSet = "SD21" #inpaint:[CNI SDI2] SD:[SD21 SD15]
 cnModelSet = "None" #None control_sd21_canny control_sd15_canny
 
@@ -218,10 +219,6 @@ def getModelType():
 
     return result
 
-def loadLora(loraModelName):
-    global pipe
-    pipe.load_lora_weights(join(lora_model_path), weight_name=loraModelName+'.safetensors')
-    # model_id = "checkpoint-25000" #if needed
 
 
 """

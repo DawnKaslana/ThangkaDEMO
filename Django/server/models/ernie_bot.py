@@ -62,6 +62,38 @@ erniebot.access_token = "a71afcff2e5ee885c6117c59d563f0d8370d6a0d"
 #         },
 #     }]
 
+availible_params = {
+    'prompt': {
+        'type': 'string',
+        'description': "圖像描述/文本描述/文本提示詞/prompt",
+    },
+    'negative_prompt': {
+        'type': 'string',
+        'description': "不希望出現的圖像內容/負面提示詞/negative prompt",
+    },
+    'steps': {
+        'type': 'number',
+        'description': "生成步數/渲染步數/steps",
+    },
+    'noise': {
+        'type': 'number',
+        'description': "噪聲強度/噪聲比例/重繪幅度/noise ratio/Denoising strength",
+    },
+    'prompt_weight': {
+        'type': 'number',
+        'description': "提示權重/文本權重/文本引導程度/prompt weight",
+    },
+    'image_count': {
+        'type': 'number',
+        'enum': [1,2,3,4],
+        'description': "生成張數/生成圖片數量/輸出數量",
+    },
+    'generate': {
+        'type': 'boolean',
+        'description': "是否有具體的生成圖像的命令/只修改參數還是需要一同執行生成",
+    },
+}
+
 functions = [
     {
         'name': 'text2img',
@@ -96,27 +128,6 @@ functions = [
         }
     },
     {
-        'name': 'changeParams',
-        'description': "修改輸入模型的參數",
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'prompt': {
-                    'type': 'string',
-                    'description': "圖像描述/文本描述/prompt",
-                },
-                'steps': {
-                    'type': 'string',
-                    'description': "生成/渲染步數",
-                },
-                'noise': {
-                    'type': 'string',
-                    'description': "噪聲強度/重繪幅度",
-                },
-            },
-        },
-    },
-    {
         'name': 'optimizePrompt',
         'description': "優化、修改、加強輸入的圖像描述文本，讓生成效果更好",
         'parameters': {
@@ -131,23 +142,10 @@ functions = [
     },
     {
         'name': 'changeParamsAndGenerate',
-        'description': "修改輸入模型的參數並執行圖像生成",
+        'description': "指定輸入模型的參數",
         'parameters': {
             'type': 'object',
-            'properties': {
-                'prompt': {
-                    'type': 'string',
-                    'description': "圖像描述/文本描述/prompt",
-                },
-                'steps': {
-                    'type': 'string',
-                    'description': "生成/渲染步數",
-                },
-                'noise': {
-                    'type': 'string',
-                    'description': "噪聲強度/重繪幅度",
-                },
-            },
+            'properties': availible_params
         },
     },
 ]
@@ -260,21 +258,28 @@ def inpaint(prompt):
             "command": command,
         })
 
-def changeParams(args):
-    # print(args)
+def getParams(args):
+    print("getParams")
+    print(args)
     params = {}
 
     if 'prompt' in args: params['prompt'] = args['prompt']
-    if 'steps' in args: params['steps'] = eval(args['steps'])
-    if 'noise' in args: params['noise'] = eval(args['noise'])
+    if 'negative_prompt' in args: params['negativePrompt'] = args['negative_prompt']
+    if 'steps' in args: params['steps'] = args['steps']
+    if 'noise' in args: params['noiseRatio'] = args['noise']
+    if 'prompt_weight' in args: params['promptWeight'] = args['prompt_weight']
+    if 'image_count' in args: params['imageCount'] = args['image_count']
 
+    if 'generate' in args: params['generate'] = args['generate']
+    return params
+
+def changeParamsAndGenerate(args):
     return JsonResponse({
             "role": "assistant",
-            "params": params,
+            "params": getParams(args),
             "content": "已修改參數。",
-            "command": "changeParams",
+            "command": "changeParamsAndGenerate",
         })
-
 
 def chat(request):
     if request.method == 'POST':
@@ -296,16 +301,15 @@ def chat(request):
         if 'thoughts' in result:
             name2function = {'text2img': text2img,
                              'inpaint': inpaint,
-                             'changeParams': changeParams,
-                             'optimizePrompt': send_command}
+                             'optimizePrompt': send_command,
+                             'changeParamsAndGenerate': changeParamsAndGenerate}
             func = name2function[result['name']]
-            if result['name'] == 'changeParams':
-                args = json.loads(result['arguments'])
+            args = json.loads(result['arguments'])
+            if result['name'] == 'changeParamsAndGenerate':
                 answer = func(args)
             elif result['name'] == 'optimizePrompt':
                 answer = func('optimizePrompt')
             else:
-                args = json.loads(result['arguments'])
                 answer = func(prompt=args['prompt'])
 
         return answer

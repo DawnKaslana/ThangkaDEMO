@@ -71,7 +71,7 @@ const StyledTab = styled((props) => <Tab disableRipple {...props} />)(
   }),
 );
 
-const cellList = {label:{url:'Label', title:'標籤'}, class:{url:'Class', title:'類別'}}
+const cellList = {label:{url:'Label', title:'标籤'}, class:{url:'Class', title:'类别'}}
 
 
 export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel, 
@@ -128,14 +128,20 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
     setClassTab(newValue);
   };
 
-  // 点击label事件：檢查是否已存在，更新prompt
+  // 点击label事件：检查是否已存在，更新prompt
+  const isExistLabel = (label) => {
+    let promptStr = isNegativeLabel? negativePrompt : prompt
+    let promptList = promptStr? promptStr.split(',') : []
+    let labelIdx = promptList.indexOf(label)
+    if (labelIdx < 0) return 0
+    else return 1
+  }
   const handleCellClick = (label) => {
     let promptStr = isNegativeLabel? negativePrompt : prompt
     let setPromptStr = isNegativeLabel? setNegativePrompt : setPrompt
-
     let promptList = promptStr? promptStr.split(',') : []
     let labelIdx = promptList.indexOf(label)
-    if (promptList.indexOf(label) < 0) promptList.push(label)
+    if (labelIdx < 0) promptList.push(label)
     else promptList.splice(labelIdx, 1)
     setPromptStr(promptList.join(','))
   };
@@ -162,7 +168,7 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
             .then((res) => {
             if(res.data === 'existed'){
                 setError(true)
-                setHelperText('該'+cellList[openType].title+'已存在')
+                setHelperText('该'+cellList[openType].title+'已存在')
             } else {
                 openType === 'label'?setRenderLabel(!renderLabel):setRenderClass(!renderClass)
                 handleClose()
@@ -170,7 +176,7 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
         })
     } else {
         setError(true)
-        setHelperText('请输入'+cellList[openType].title+'名稱')
+        setHelperText('请输入'+cellList[openType].title+'名称')
     }
 }
 
@@ -186,7 +192,7 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
             .then((res) => {
             if(res.data === 'existed'){
                 setError(true)
-                setHelperText('該'+cellList[openType].title+'已存在')
+                setHelperText('该'+cellList[openType].title+'已存在')
             } else {
                 openType === 'label'?setRenderLabel(!renderLabel):setRenderClass(!renderClass)
                 handleClose()
@@ -197,7 +203,7 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
       }
       if (!input) {
           setError(true)
-          setHelperText('请输入'+cellList[openType].title+'名稱')
+          setHelperText('请输入'+cellList[openType].title+'名称')
       }
   }
 
@@ -272,7 +278,7 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
                   {showEdit? <EditNoteIcon/>:<EditOffIcon/>}
               </IconButton>
             </Tooltip>
-            <Tooltip title="切換標籤顯示語言" placement="bottom" arrow>
+            <Tooltip title="切换标籤显示语言" placement="bottom" arrow>
               <IconButton key={-3}
                 edge="start"
                 className={styles.tabIconButton}
@@ -288,8 +294,9 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
             {filteredLabels.length > 0 ? (
               filteredLabels?.map((label, idx) => (
                 <Grid item xs={12} sm={6} md={3} lg={2} xl={1} xxl={1} key={idx}>
-                  <Paper className={styles.paper} onClick={()=>showEdit&&label.user_id?handleCellFunc('label','edit',label):handleCellClick(label.value)} >
-                      <Box sx={{margin:'0 auto', maxWidth:'100%', wordWrap: 'break-word', textWrap: 'wrap'}}>
+                  <Paper className={isExistLabel(label.value)?styles.existLable:styles.paper}
+                  onClick={()=>showEdit&&label.user_id?handleCellFunc('label','edit',label):handleCellClick(label.value)} >
+                      <Box className={styles.label} >
                         {labelLang === 'zh_CN' && label.zh_CN? label.zh_CN:label.value}
                       </Box>
                       {showEdit && label.user_id? 
@@ -309,7 +316,7 @@ export default function LabelDrawer({ open, setLabelOpen, isNegativeLabel,
         </Box>
       </Drawer>
       <Dialog open={cellDialogOpen} onClose={handleClose} disableEnforceFocus>
-      <DialogTitle >{openFunc === 'add'? '新增': '编辑'}{openType === 'class'? '類別': '標籤'}</DialogTitle>
+      <DialogTitle >{openFunc === 'add'? '新增': '编辑'}{openType === 'class'? '类别': '标籤'}</DialogTitle>
       <DialogContent sx={{pb:'20px'}}>
           <TextField
               autoFocus

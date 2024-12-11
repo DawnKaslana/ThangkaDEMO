@@ -10,7 +10,7 @@ docker-compose up --build or docker compose up --build 依系統而定
 sudo mkdir -p /etc/docker
 sudo tee /etc/docker/daemon.json <<-'EOF'
 {
-  "registry-mirrors": ["https://yaguali8.mirror.aliyuncs.com"]
+  "registry-mirrors": [available_mirrors]
 }
 EOF
 sudo systemctl daemon-reload
@@ -18,7 +18,7 @@ sudo systemctl restart docker
 ```
 
 成功開啟的話可在localhost:3000看到網頁。
-有些套件要進去安裝，從F12可以看到缺失套件(因為我沒加在package.json裡)
+若有缺失套件可進容器進行安裝
 ```
 docker exec -it <container_code> /bin/sh
 npm install <package_name>
@@ -30,12 +30,15 @@ cd ./Django
 python3 manage.py runserver localhost:4000
 
 裡面模型位置要換成你的本地模型路徑！
-/server/models/diffusion.py底下的
+修改/server/models/diffusion.py底下的"""presetting"""處
 ```
-output_path = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media/output/"
-sd_model_path = "/mnt/Workspace/SDmodels/"
-model_path = "/mnt/Workspace/SDmodels/Lora"
-filePath = "/mnt/Workspace/Django/server/media/"
+edge_connect_dir = "/mnt/Workspace/edge-connect"
+model_rootpath = "/mnt/Workspace/models/"
+cn_model_path = join(model_rootpath, "CN")
+lora_model_path = join(model_rootpath, "Lora")
+edge_model_path = join(model_rootpath, "edge")
+# 圖片上傳存放的路徑
+filePath = "/mnt/Workspace/thangka_inpaint_DEMO/Django/server/media"
 ```
 Mysql
 ---------

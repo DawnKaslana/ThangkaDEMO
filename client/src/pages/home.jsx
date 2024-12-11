@@ -53,7 +53,7 @@ const isTest = false;
 const cookies = new Cookies();
 
 // pre-data
-const helloText = "Hello!這裡是TY的Thangka Inpaint DEMO."
+const helloText = "Hello!这里是TY的Thangka Inpaint DEMO."
 const preNegativePrompt = "bad,ugly,disfigured,blurry,watermark,normal quality,jpeg artifacts,low quality,worst quality,cropped,low res"
 
 
@@ -127,7 +127,7 @@ export function Home() {
   const [errorMsg, setErrorMsg] = useState("")
   const [errorState, setErrorState] = useState(true)
   
-  // 讀取後端的模型狀態
+  // 读取后端的模型状态
   const getPipeType = () => {
     django({ url: '/getPipeType/', method: 'get'})
     .then(res => {
@@ -143,7 +143,7 @@ export function Home() {
     .catch((err)=>{
       if (!isTest) {
         setInputError(true)
-        setErrorMsg('後端連接錯誤')
+        setErrorMsg('后端连接错误')
         setErrorState(true)
       }
       setGenerateState(true)
@@ -158,7 +158,7 @@ export function Home() {
   }, [chatDialogs]);
 
 
-  // 對話相關功能: handleNewDialog, deleteDialogs, revokeDialogs, regenerateDialog
+  // 对话相关功能: handleNewDialog, deleteDialogs, revokeDialogs, regenerateDialog
   const handleNewDialog = (args) => {
     setScrolling(true);
     setChatDialogs([...chatDialogs, args])
@@ -190,7 +190,7 @@ export function Home() {
 
         setChatDialogs([...chatDialogs.slice(0, -1), { type: 'load', class: 'speak' }])
 
-        //傳入刪掉百度回覆的訊息列表
+        //传入删掉百度回复的讯息列表
         let messagesList = messages.slice(0, -1)
         const formData = new FormData();
         formData.append('messages', JSON.stringify(messagesList));
@@ -204,7 +204,7 @@ export function Home() {
   }
   
 
-  // 處理聊天消息
+  // 处理聊天消息
   const handleMessages = (args, rm) => {
     if (args.content) {
       let chatList
@@ -230,18 +230,24 @@ export function Home() {
     }
     if (['inpaint','text2img','img2img'].includes(args.command)) {
       generateHandler(args)
-    } else if (args.command === 'changeParams') {
-      changeParams(args.params)
+    } else if (args.command === 'changeParamsAndGenerate') {
+      changeParamsAndGenerate(args.params)
     } else if (args.command === 'optimizePrompt') {
       optimizePrompt()
     }
   }
 
-  // 對話回傳操作: changeParams, optimizePrompt
-  const changeParams = (params) => {
+  // 对话回传操作: changeParamsAndGenerate, optimizePrompt
+  const changeParamsAndGenerate = (params) => {
+    console.log('changeParamsAndGenerate')
+    console.log(params)
     if (params.prompt) setPrompt(params.prompt)
+    if (params.negativePrompt) setPrompt(params.negativePrompt)
     if (params.steps) setSteps(params.steps)
     if (params.noiseRatio) setNoiseRatio(params.noiseRatio)
+    if (params.promptWeight) setPromptWeight(params.promptWeight)
+    if (params.imageCount) setImageCount(params.imageCount)
+    if (params.generate) generateHandler(params)
   }
 
   const optimizePrompt = (isClick) => {
@@ -262,7 +268,7 @@ export function Home() {
       if (!isClick){
         handleMessages({
           "role": "assistant",
-          "content": "請輸入prompt。",
+          "content": "请输入prompt。",
         })
       }
     }
@@ -273,7 +279,7 @@ export function Home() {
     if (args.prompt) setPrompt(args.prompt)
     if (CNModel !== 'None' && !selectedCNImg){
       setInputError(true)
-      setErrorMsg("請輸入控制圖像。")
+      setErrorMsg("请输入控制图像。")
       return
     }
 
@@ -284,8 +290,8 @@ export function Home() {
         generateFunc = inpaintGenerate
       } else {
         setInputError(true)
-        if (!selectedImg) setErrorMsg("請輸入待修復圖像。")
-        if (selectedImg && !selectedMask) setErrorMsg("請輸入遮罩圖像。")
+        if (!selectedImg) setErrorMsg("请输入待修復图像。")
+        if (selectedImg && !selectedMask) setErrorMsg("请输入遮罩图像。")
         return
       }
     } else if (type === 'text2img') {
@@ -293,7 +299,7 @@ export function Home() {
         generateFunc = text2imgGenerate
       } else {
         setInputError(true)
-        setErrorMsg("請輸入prompt。")
+        setErrorMsg("请输入prompt。")
         return
       }
     } else if (type === 'img2img') {
@@ -301,7 +307,7 @@ export function Home() {
         generateFunc = img2imgGenerate
       } else {
         setInputError(true)
-        setErrorMsg("請輸入圖像。")
+        setErrorMsg("请输入图像。")
         return
       }
     }
@@ -310,7 +316,7 @@ export function Home() {
     formData.append('prompt', args.prompt?args.prompt:prompt);
     formData.append('negativePrompt', negativePrompt);
 
-    //if selectedCNImg = 'generated' 就不用送邊緣圖，送檔名，讓D直接讀edgeDir
+    //if selectedCNImg = 'generated' 就不用送边缘图，送档名，让Djangle直接读edgeDir
     if (selectedCNImg?.generated) {
       formData.append('isGCN', true);
       formData.append('CNImage', selectedCNImg.generated);
@@ -441,7 +447,7 @@ export function Home() {
       })
     } else {
       setInputError(true)
-      setErrorMsg("請輸入原始圖像。")
+      setErrorMsg("请输入原始图像。")
     }
   }
 
@@ -494,7 +500,7 @@ export function Home() {
   const [isNegativeLabel, setIsNegativeLabel] = useState(0);
 
 
-  // 對話框元件: AIAvatar, AIDialog, outputDialog, generatingDialog, speakDialog, userDialog, showDialog
+  // 对话框元件: AIAvatar, AIDialog, outputDialog, generatingDialog, speakDialog, userDialog, showDialog
   const AIAvatar = () => (
     <Avatar sx={{bgcolor: 'purple', width: 56, height: 56, ml: 1, mr: 1}}>TY</Avatar>
   )
@@ -536,7 +542,7 @@ export function Home() {
               生成模型：{item.pramas.get('SDModel')}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              微調模型：{item.pramas.get('loraModelName')}
+              微调模型：{item.pramas.get('loraModelName')}
             </Typography>
             { type !== 'text2img'?
             <Tooltip title={<h3>Send image to input</h3>} placement="top" arrow>
@@ -550,17 +556,17 @@ export function Home() {
           </Box>
           <Box className={classes.flexRow}>
             <Typography variant="body2" sx={{mr:1}} color="text.secondary">
-              生成步數：{item.pramas.get('steps')}
+              生成步数：{item.pramas.get('steps')}
             </Typography>
             <Typography variant="body2" sx={{mr:1}} color="text.secondary">
-              雜訊強度：{item.pramas.get('strength')}
+              杂讯强度：{item.pramas.get('strength')}
             </Typography>
             <Typography variant="body2" sx={{mr:1}} color="text.secondary">
-              文本權重：{item.pramas.get('guidance')}
+              文本权重：{item.pramas.get('guidance')}
             </Typography>
             {/* if count > 1要多一行 */}
             <Typography variant="body2" color="text.secondary">
-              隨機種子：{item.pramas.get('seed')}
+              随机种子：{item.pramas.get('seed')}
             </Typography>
           </Box>
           {item.pramas.get('prompt') ?
@@ -612,7 +618,7 @@ export function Home() {
     </Box>
   )
   
-  // 控制對話列表顯示: showDialog, AlwaysScrollToView
+  // 控制对话列表显示: showDialog, AlwaysScrollToView
   const showDialog = (chatDialogs) => {
     let dialogs = []
     for (let idx in chatDialogs) {
@@ -712,4 +718,3 @@ export function Home() {
     </Box>
   )
 }
-

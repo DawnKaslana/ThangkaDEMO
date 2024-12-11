@@ -98,6 +98,9 @@ const useStyles = makeStyles((theme) => ({
     labelDrawer: {
       backgroundColor: '#2e1534', //'#212121'
     },
+    label:{
+      margin:'0 auto', maxWidth:'100%', wordWrap: 'break-word', textWrap: 'wrap'
+    },
     tableRoot: {
       flexGrow: 1,
       padding:'1em',
@@ -111,6 +114,21 @@ const useStyles = makeStyles((theme) => ({
       cursor: 'pointer',
       fontSize: '1.2em',
       // lineHeight:'1em',
+      fontWeight:'500',
+      '&:hover': {
+        color:'black',
+        backgroundColor: '#e0c1ff',
+      },
+    },
+    existLable: {
+      display:'flex',
+      justifyContent:'end',
+      padding: theme.spacing(1.8),
+      textAlign: 'center',
+      color: '#4F4F4F',
+      cursor: 'pointer',
+      fontSize: '1.2em',
+      backgroundColor: 'pink',
       fontWeight:'500',
       '&:hover': {
         color:'black',

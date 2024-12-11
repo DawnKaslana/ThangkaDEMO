@@ -145,7 +145,7 @@ export function User() {
                 .then((res) => {
                 if(res.data === 'existed'){
                     setError(true)
-                    setHelperText('用戶名已存在')
+                    setHelperText('用户名已存在')
                 } else {
                     setRender(!render)
                     handleClose()
@@ -163,7 +163,7 @@ export function User() {
                 .then((res) => {
                 if(res.data === 'existed'){
                     setError(true)
-                    setHelperText('用戶名已存在')
+                    setHelperText('用户名已存在')
                 } else {
                     setRender(!render)
                     handleClose()

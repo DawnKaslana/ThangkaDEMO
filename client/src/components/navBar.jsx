@@ -84,7 +84,7 @@ const NavBar = ({
             <Toolbar variant="dense"
                 sx={{ display: 'flex', flexDirection: "row", alignItems: "center", height: '6vh' }}>
 
-                {/* 打開生成設置drawer ＆ 登出按鈕 */}
+                {/* 打开生成设置drawer ＆ 登出按钮 */}
                 <IconButton
                     color="inherit"
                     aria-label="open drawer"
@@ -131,7 +131,7 @@ const NavBar = ({
                         value={inputText}
                         id='inputField'
                         fullWidth
-                        placeholder="請輸入..."
+                        placeholder="请输入..."
                         sx={{ input: { color: 'white', height: '90%' } }}
                         onChange={e => setInput(e.target.value)}
                         InputProps={{

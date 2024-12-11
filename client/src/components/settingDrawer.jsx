@@ -166,7 +166,7 @@ const SettingDrawer = ({ open,
     let ext = filename.substring(filename.lastIndexOf('.'));
     if (ext !== '.png' && ext !== '.jpg' && ext !== '.jpeg'){
       setInputError(true)
-      setErrorMsg('請輸入png或jpg檔案。')
+      setErrorMsg('请输入png或jpg档案。')
       return
     }
 
@@ -257,7 +257,7 @@ const SettingDrawer = ({ open,
     value <= 200 ? setSteps(value) : setSteps(200)
   }
 
-  // 左側參數設定欄
+  // 左侧参数设定栏
   const Options = () => {
     return(
       <Box sx={{p:2}}>
@@ -298,8 +298,8 @@ const SettingDrawer = ({ open,
           ))}
         </Select>
 
-        {/* 微調模型选择 */}
-        <Typography variant="h6" mt={2}>微調模型选择</Typography>
+        {/* 微调模型选择 */}
+        <Typography variant="h6" mt={2}>微调模型选择</Typography>
         <Select value={loraModel} onChange={(e)=>handleChangeLora(e.target.value)}
                 fullWidth color="secondary">
             <MenuItem key={0} value={'None'}>
@@ -312,7 +312,7 @@ const SettingDrawer = ({ open,
           ))}
         </Select>
 
-        {/* 是否使用邊緣模型(controlNet canny 2) */}
+        {/* 是否使用边缘模型(controlNet canny 2) */}
         <Typography variant="h6" mt={2}>控制模型选择</Typography>
         <Select value={CNModel} onChange={(e)=>handleChangeCN(e.target.value)}
                 fullWidth color="secondary" disabled={generateState}>
@@ -326,10 +326,10 @@ const SettingDrawer = ({ open,
           ))}
         </Select>
 
-        {/* 上傳图片 */}
+        {/* 上传图片 */}
         { type === 'text2img'? null: 
           <Box className={classes.flexRow}>
-            <Typography variant="h6" mt={2}>上傳图片</Typography>
+            <Typography variant="h6" mt={2}>上传图片</Typography>
             <Box sx={{flexGrow:1}}/>
             <IconButton sx={{ml: 1}} 
               onClick={()=>handleClickEditImg('edit','img')}>
@@ -361,10 +361,10 @@ const SettingDrawer = ({ open,
           </Box>}
         </Box>}
 
-        {/* 上傳Mask */}
+        {/* 上传Mask */}
         { type === 'inpaint'? 
           <Box className={classes.flexRow}>
-            <Typography variant="h6" mt={1}>上傳遮罩</Typography>
+            <Typography variant="h6" mt={1}>上传遮罩</Typography>
             <Box sx={{flexGrow:1}}/>
             <IconButton sx={{ml: 1}} 
               onClick={()=>handleClickEditImg('edit','mask')}>
@@ -400,10 +400,10 @@ const SettingDrawer = ({ open,
           </Box>}
         </Box>:null}
 
-        {/* 上傳CNimg */}
+        {/* 上传CNimg */}
         { CNModel === 'None'? null:
           <Box className={classes.flexRow}>
-          <Typography variant="h6" mt={1}>上傳控制图片</Typography>
+          <Typography variant="h6" mt={1}>上传控制图片</Typography>
             <Box sx={{flexGrow:1}}/>
             <input style={{ display: 'none' }}
             ref={inputImgforGCNRef}
@@ -461,7 +461,7 @@ const SettingDrawer = ({ open,
             </Select>
           </Box>
 
-          {/* 隨機種子 */}
+          {/* 随机种子 */}
           <Box sx={{width:'45%'}}>
             <Box className={classes.flexRow}>
               <Typography variant="h6" >随机种子</Typography>
@@ -481,7 +481,7 @@ const SettingDrawer = ({ open,
         </Box>
 
         {/* 噪声比例 */}
-        <Typography variant="h6" gutterBottom mt={2}>重繪幅度</Typography>
+        <Typography variant="h6" gutterBottom mt={2}>重绘幅度</Typography>
         <Slider
           value={noiseRatio}
           min={0}
@@ -509,20 +509,20 @@ const SettingDrawer = ({ open,
         {/* Prompt和NegativePrompt输入框 */}
         <Box className={classes.flexRow} sx={{justifyContent:"space-between"}}>
           <Typography variant="h6" gutterBottom >Prompt</Typography>
-          {/* 翻譯按鈕 */}
+          {/* 翻译按钮 */}
           <IconButton sx={{p:0,ml:1}} edge="start" color="inherit"
             disabled={generateState}
             onClick={(e)=>handleTranslateClick(e, 0)}>
             <GTranslateIcon />
           </IconButton>
-          {/* 優化按鈕 */}
+          {/* 优化按钮 */}
           <IconButton sx={{p:0,ml:1}} edge="start" color="inherit"
             disabled={generateState}
             onClick={()=>optimizePrompt(true)}>
             <AutoFixHighIcon />
           </IconButton>
           <Box sx={{flexGrow:1}}/>
-          {/* 打開Prompt label標籤欄 */}
+          {/* 打开Prompt label标籤栏 */}
           <Tooltip title={<h4>Prompt label</h4>} placement="top" arrow>
           <IconButton sx={{p:0}} edge="start" color="inherit"
             onClick={()=>{setLabelOpen(true);setIsNegativeLabel(0)}} >
@@ -539,14 +539,14 @@ const SettingDrawer = ({ open,
         />
         <Box className={classes.flexRow}>
           <Typography variant="h6" gutterBottom>Negative Prompt</Typography>
-          {/* 翻譯按鈕 */}
+          {/* 翻译按钮 */}
           <IconButton sx={{p:0,ml:1}} edge="start" color="inherit"
             disabled={generateState}
             onClick={(e)=>handleTranslateClick(e, 1)}>
             <GTranslateIcon />
           </IconButton>
           <Box sx={{flexGrow:1}}/>
-          {/* 打開Negative label標籤欄 */}
+          {/* 打开Negative label标籤栏 */}
           <Tooltip title={<h4>Negative label</h4>} placement="top" arrow>
           <IconButton sx={{p:0}} edge="start" color="inherit"
           onClick={()=>{setLabelOpen(true);setIsNegativeLabel(1)}} >
@@ -693,8 +693,8 @@ const SettingDrawer = ({ open,
     sx={{zIndex:10}}
     >
       <DialogTitle sx={{ m: 0, p: 2, fontSize:'2em' }} id="EditImg">
-        {func === 'edit'? '編輯' : '製作'}
-        {type === 'img'? '圖像' : '遮罩'}
+        {func === 'edit'? '编辑' : '製作'}
+        {type === 'img'? '图像' : '遮罩'}
       </DialogTitle>
       <IconButton
         aria-label="done"
@@ -733,8 +733,8 @@ const SettingDrawer = ({ open,
     </Dialog>
   }
 
-  // 翻譯選項菜單: handleTranslateClick/Close
-  // 翻譯功能: translate
+  // 翻译选项菜单: handleTranslateClick/Close
+  // 翻译功能: translate
   const [anchorEl, setAnchorEl] = useState(null);
   const [languageNMenu, setLanguageNMenu] = useState(0);
   const languageMenuOpen = Boolean(anchorEl);
