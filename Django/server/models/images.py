@@ -187,5 +187,15 @@ def canny_image(image):
     np_image = np.concatenate([np_image, np_image, np_image], axis=2)
     return Image.fromarray(np_image)
 
+def crop(img):
+    width, height = img.size
+    minsize = height if width > height else width
+    left = (width - minsize) / 2
+    top = (height - minsize) / 2
+    right = (width + minsize) / 2
+    bottom = (height + minsize) / 2
+
+    return img.crop((left, top, right, bottom)).resize((512,512))
+
 
 

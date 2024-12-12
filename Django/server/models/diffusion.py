@@ -191,7 +191,7 @@ preloading type & model
 """
 typeSet = "inpaint" #inpaint text2img img2img
 modelSet = "SD21" #inpaint:[CNI SDI2] SD:[SD21 SD15]
-cnModelSet = "control_sd21_canny" #None control_sd21_canny control_sd15_canny
+cnModelSet = "None" #None control_sd21_canny control_sd15_canny
 
 # load pipe first time
 pipe = changeModel(typeSet, modelSet, cnModelSet, ft=True)
@@ -244,8 +244,9 @@ def edge_inpaint(filename, maskname=None):
 
         return res.returncode
     else:
-        image = Image.open(join(image_path, filename)).resize((512,512)).convert('L')
-        edge = canny(np.array(image), sigma=1)
+        image = Image.open(join(image_path, filename)).convert('L')
+        crop_image = images.crop(image)
+        edge = canny(np.array(crop_image), sigma=1)
         edge = Image.fromarray(edge)
         edge.save(join(edge_path, filename[:-4]+'_edge.png'))
         return 0
@@ -276,9 +277,11 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
     # process image & mask  &  image_masked
-    image = Image.open(join(output_path if isGIM else image_path, filename)).convert("RGBA").resize((512,512))
+    image = Image.open(join(output_path if isGIM else image_path, filename)).convert("RGBA")
+    image = images.crop(image)
     image_flat = images.flatten(image, "#ffffff")
-    mask_image = Image.open(join(mask_path, maskName)).resize((512,512))
+    mask_image = Image.open(join(mask_path, maskName))
+    mask_image = images.crop(mask_image)
     kernel = np.ones((3, 3), np.uint8)
     test = cv2.dilate(np.array(mask_image), kernel, iterations=1)
     test = Image.fromarray(test)
@@ -287,7 +290,8 @@ def inpaint(filename, isGIM, maskName, prompt, nagative_prompt,
     image_fill = images.fill(image_flat, bin_mask) #通過模糊填充周圍顏色
 
     if CNImgName:
-        cnImg = Image.open(join(edge_path, CNImgName)).resize((512, 512))
+        cnImg = Image.open(join(edge_path, CNImgName))
+        cnImg = images.crop(cnImg)
         if cnImg.mode != 'L' and cnImg.mode != '1':
             cnImg = images.canny_image(cnImg)
     else:
@@ -363,7 +367,8 @@ def text2img(filename, prompt, negativePrompt, steps, seed, strength, guidance, 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
     if CNImgName:
-        cnImg = Image.open(join(edge_path, CNImgName)).resize((512, 512))
+        cnImg = Image.open(join(edge_path, CNImgName))
+        cnImg = images.crop(cnImg)
         if cnImg.mode != 'L' and cnImg.mode != '1':
             cnImg = images.canny_image(cnImg)
 
@@ -405,11 +410,13 @@ def img2img(filename, isGIM, prompt, negativePrompt, steps, seed, strength, guid
 
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
-    init_image = Image.open(join(output_path if isGIM else image_path, filename)).resize((512,512))
+    init_image = Image.open(join(output_path if isGIM else image_path, filename))
+    init_image = images.crop(init_image)
     init_image = images.flatten(init_image, "#ffffff")
 
     if CNImgName:
-        cnImg = Image.open(join(edge_path, CNImgName)).resize((512, 512))
+        cnImg = Image.open(join(edge_path, CNImgName))
+        cnImg = images.crop(cnImg)
         if cnImg.mode != 'L' and cnImg.mode != '1':
             cnImg = images.canny_image(cnImg)
 
