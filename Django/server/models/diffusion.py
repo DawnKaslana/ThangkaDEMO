@@ -189,7 +189,7 @@ def changeModel(generateType, model, cnModel=None,ft=False):
 """
 preloading type & model
 """
-typeSet = "inpaint" #inpaint text2img img2img
+typeSet = "text2img" #inpaint text2img img2img
 modelSet = "SD21" #inpaint:[CNI SDI2] SD:[SD21 SD15]
 cnModelSet = "None" #None control_sd21_canny control_sd15_canny
 

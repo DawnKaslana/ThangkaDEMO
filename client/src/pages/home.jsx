@@ -377,6 +377,7 @@ export function Home() {
     django({ url: '/generate/', method: 'post', data: formData })
       .then(res => {
         if (res.data.msg === "successed") {
+          let outputName = res.data.outputName
           django({
             url: '/getImg/', method: 'get', params: {
               imageName: filename,
@@ -384,7 +385,9 @@ export function Home() {
               path:'output'
             }
           }).then(res => {
-            handleNewDialog({ type: 'output', src: res.data.img,
+            handleNewDialog({ type: 'output', 
+              src: res.data.img, 
+              filename: outputName,
               pramas: formData})
             setGenerateState(false)
           })
