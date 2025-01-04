@@ -32,7 +32,7 @@ export HUGGINGFACE_HUB_CACHE=/media/brl2022-1/brl2022-1-1/xty/huggingface/hub/
 """
 presetting
 """
-edge_connect_dir = "/mnt/Workspace/edge-connect"
+edge_connect_dir = "/mnt/Workspace/thangka_inpaint_DEMO/edge-connect"
 model_rootpath = "/mnt/Workspace/models/"
 cn_model_path = join(model_rootpath, "CN")
 lora_model_path = join(model_rootpath, "Lora")
@@ -189,9 +189,9 @@ def changeModel(generateType, model, cnModel=None,ft=False):
 """
 preloading type & model
 """
-typeSet = "text2img" #inpaint text2img img2img
+typeSet = "inpaint" #inpaint text2img img2img
 modelSet = "SD21" #inpaint:[CNI SDI2] SD:[SD21 SD15]
-cnModelSet = "None" #None control_sd21_canny control_sd15_canny
+cnModelSet = "control_sd21_canny" #None control_sd21_canny control_sd15_canny
 
 # load pipe first time
 pipe = changeModel(typeSet, modelSet, cnModelSet, ft=True)
@@ -234,12 +234,20 @@ def edge_inpaint(filename, maskname=None):
         py_dir = join(edge_connect_dir, 'test.py')
         checkpoints = join(edge_model_path,'thangkaAC_1') #thangkaAC_1
         image = join(image_path, filename)
+        input_image = Image.open(image)
+        crop_image = images.crop(input_image)
+        crop_image.save(image)
         mask = join(mask_path, maskname)
+        input_mask = Image.open(mask)
+        crop_mask = images.crop(input_mask)
+        crop_mask.save(mask)
 
-        command = "python3 %s --model 1 --checkpoints %s --input %s --mask %s --output %s"\
-                  % (py_dir, checkpoints, image, mask, edge_path)
-        command = command.split()
+        command = ['python3',py_dir, '--model', '1',
+                   '--checkpoints', checkpoints,
+                   '--input', image, '--mask', mask,
+                   '--output', edge_path]
 
+        print(command)
         res = subprocess.run(command, timeout=30, check=True)
 
         return res.returncode

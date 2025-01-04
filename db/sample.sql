@@ -282,7 +282,7 @@ INSERT INTO `label` (`user_id`, `value`, `zh_CN`, `class`) VALUES
 (0, 'with pendant', '带吊坠', 6),
 (0, 'black hair down on shoulders', '黑发披肩', 6),
 (0, 'dark blue three-eyed head', '深蓝色有三隻眼的脸', 6),
-(0, 'angry head', '愤怒的脸', 6),
+(0, 'angry face', '愤怒的脸', 6),
 (0, 'colorful Mandorla', '五彩的光轮', 6),
 (0, 'yellow background', '黄色背景', 6);
 

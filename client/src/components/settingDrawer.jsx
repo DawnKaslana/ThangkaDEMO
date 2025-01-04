@@ -570,7 +570,7 @@ const SettingDrawer = ({ open,
     onClose={()=>setHelpOpen(false)}
     aria-labelledby="help-dialog"
     open={helpOpen}
-    maxWidth='md'
+    maxWidth='lg'
     fullWidth
     >
       <DialogTitle sx={{ m: 0, p: 2, fontSize:'2em' }} id="HelpDialog">
